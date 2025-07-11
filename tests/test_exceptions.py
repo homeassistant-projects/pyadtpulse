@@ -30,7 +30,7 @@ class TestCodeUnderTest:
     # PulseExceptionWithBackoff increments the backoff count when initialized
     def test_pulse_exception_with_backoff_increment(self):
         backoff = PulseBackoff("test", 1.0)
-        exception = PulseExceptionWithBackoff("error", backoff)
+        PulseExceptionWithBackoff("error", backoff)
         assert backoff.backoff_count == 1
 
     # PulseExceptionWithRetry can be initialized with a message, a PulseBackoff object, and a retry time
@@ -47,7 +47,7 @@ class TestCodeUnderTest:
         backoff = PulseBackoff("test", 1.0)
         backoff.increment_backoff()
         retry_time = time() + 10
-        exception = PulseExceptionWithRetry("error", backoff, retry_time)
+        PulseExceptionWithRetry("error", backoff, retry_time)
         assert backoff.backoff_count == 0
         assert backoff.expiration_time == retry_time
 
@@ -101,7 +101,7 @@ class TestCodeUnderTest:
 
     # PulseAuthenticationError is a subclass of PulseLoginException
     def test_pulse_authentication_error_inheritance(self):
-        backoff = PulseBackoff("test", 1.0)
+        PulseBackoff("test", 1.0)
         exception = PulseAuthenticationError()
         assert isinstance(exception, PulseLoginException)
 
@@ -128,12 +128,6 @@ class TestCodeUnderTest:
         backoff = PulseBackoff("test", 1.0)
         exception = PulseExceptionWithBackoff("error", backoff)
         assert str(exception) == "PulseExceptionWithBackoff: error"
-
-    # PulseExceptionWithBackoff string representation includes the backoff object
-    def test_pulse_exception_with_backoff_string_representation(self):
-        backoff = PulseBackoff("test", 1.0)
-        exception = PulseExceptionWithBackoff("error", backoff)
-        assert str(exception) == "PulseExceptionWithBackoff: error"
         assert exception.backoff == backoff
         assert backoff.backoff_count == 1
 
@@ -146,7 +140,7 @@ class TestCodeUnderTest:
 
     # PulseNotLoggedInError is a subclass of PulseLoginException
     def test_pulse_not_logged_in_error_inheritance(self):
-        backoff = PulseBackoff("test", 1.0)
+        PulseBackoff("test", 1.0)
         exception = PulseNotLoggedInError()
         assert isinstance(exception, PulseLoginException)
 

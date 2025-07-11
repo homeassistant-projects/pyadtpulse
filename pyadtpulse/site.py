@@ -468,8 +468,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
                 # we know that orb sorts with trouble first, tripped next, then ok
                 if status != "Online":
                     self._trouble_zones.add(zone_id)
-                    if zone_id in self._tripped_zones:
-                        self._tripped_zones.remove(zone_id)
+                    self._tripped_zones.discard(zone_id)
                     update_zone_from_row(zone_id, state, status, last_update)
                     continue
                 # this should be trouble or OK sensors

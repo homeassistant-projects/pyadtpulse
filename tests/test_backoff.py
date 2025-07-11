@@ -21,7 +21,7 @@ def test_initialize_backoff_valid_parameters():
     detailed_debug_logging = False
 
     # Store the current time
-    current_time = time()
+    time()
 
     # Act
     backoff = PulseBackoff(
@@ -579,7 +579,7 @@ async def test_wait_for_backoff_with_negative_diff(mocker):
     # Set the expiration time to a past time
     backoff._expiration_time = time() - 1
 
-    start_time = time()
+    time()
 
     # Act
     await backoff.wait_for_backoff()
@@ -611,11 +611,8 @@ def test_calculate_backoff_interval_with_backoff_count_less_than_threshold():
         detailed_debug_logging,
     )
 
-    # Act
-    result = backoff._calculate_backoff_interval()
-
-    # Assert
-    assert result == 0.0
+    # Act and Assert
+    assert backoff._calculate_backoff_interval() == 0.0
 
 
 # Calculate backoff interval with backoff_count > threshold and exceeds max_backoff_interval

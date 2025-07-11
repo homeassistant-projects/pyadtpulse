@@ -3,7 +3,6 @@
 import asyncio
 import re
 from collections.abc import Generator
-from http.client import responses
 from typing import Any, Literal
 from collections.abc import Callable
 from unittest.mock import AsyncMock, patch

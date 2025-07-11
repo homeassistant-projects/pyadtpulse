@@ -51,8 +51,7 @@ class TestPulseConnectionStatus:
         Test that get_backoff returns a PulseBackoff object.
         """
         pcs = PulseConnectionStatus()
-        backoff = pcs.get_backoff()
-        assert isinstance(backoff, PulseBackoff)
+        assert isinstance(pcs.get_backoff(), PulseBackoff)
 
     # increment_backoff can be called without errors
     def test_increment_backoff(self):
@@ -167,11 +166,10 @@ class TestPulseConnectionStatus:
         Test that increment_backoff increases the backoff count by 1.
         """
         pcs = PulseConnectionStatus()
-        backoff = pcs.get_backoff()
+        backoff = pcs.get_backoff()  # noqa: FURB184
         initial_backoff_count = backoff.backoff_count
         backoff.increment_backoff()
-        new_backoff_count = backoff.backoff_count
-        assert new_backoff_count == initial_backoff_count + 1
+        assert backoff.backoff_count == initial_backoff_count + 1
 
     # reset_backoff sets the backoff count to 0 and the expiration time to 0.0
     def test_reset_backoff_sets_backoff_count_and_expiration_time(self):
@@ -179,8 +177,7 @@ class TestPulseConnectionStatus:
         Test that reset_backoff sets the backoff count to 0 and the expiration time to 0.0.
         """
         pcs = PulseConnectionStatus()
-        backoff = pcs.get_backoff()
+        backoff = pcs.get_backoff()  # noqa: FURB184
         backoff.increment_backoff()
         backoff.reset_backoff()
-        assert backoff.backoff_count == 0
-        assert backoff.expiration_time == 0.0
+        assert backoff.backoff_count == 0 and backoff.expiration_time == 0.0

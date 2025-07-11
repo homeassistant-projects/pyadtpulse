@@ -184,8 +184,6 @@ class TestPulseQueryManager:
         query_manager = PulseQueryManager(connection_status, connection_properties)
         expected_error_message = "Connection refused"
 
-        expected_response = (None, None, None, None)
-
         # When
         with pytest.raises(PulseServerConnectionError) as exc_info:
             await query_manager.async_query("/api/data", requires_authentication=False)
@@ -207,7 +205,7 @@ class TestPulseQueryManager:
         expected_error = PulseServerConnectionError(
             "Error occurred", connection_status.get_backoff()
         )
-        ck = ConnectionKey("portal.adtpulse.com", 443, True, None, None, None, None)
+        ConnectionKey("portal.adtpulse.com", 443, True, None, None, None, None)
         url = get_mocked_url("/api/data")
         mocked_server_responses.get(url, exception=expected_error)
         # When, Then
@@ -332,10 +330,10 @@ class TestPulseQueryManager:
         connection_status = PulseConnectionStatus()
         connection_properties = PulseConnectionProperties("https://portal.adtpulse.com")
         query_manager = PulseQueryManager(connection_status, connection_properties)
-        expected_response = (429, "Too Many Requests", URL("http://example.com"))
+        (429, "Too Many Requests", URL("http://example.com"))
         mocked_server_responses.get(get_mocked_url("/api/data"), status=429)
         # When
-        with pytest.raises(PulseServiceTemporarilyUnavailableError) as exc_info:
+        with pytest.raises(PulseServiceTemporarilyUnavailableError):
             await query_manager.async_query("/api/data", requires_authentication=False)
 
     # can handle invalid Retry-After header value format
@@ -409,7 +407,6 @@ class TestPulseQueryManager:
         connection_status = PulseConnectionStatus()
         connection_properties = PulseConnectionProperties("https://portal.adtpulse.com")
         query_manager = PulseQueryManager(connection_status, connection_properties)
-        expected_response = (0, None, None, None)
 
         async def mock_async_query(
             uri,
@@ -480,7 +477,7 @@ class TestPulseQueryManager:
         connection_status = PulseConnectionStatus()
         connection_properties = PulseConnectionProperties("https://portal.adtpulse.com")
         query_manager = PulseQueryManager(connection_status, connection_properties)
-        expected_response = (200, "Response", URL("http://example.com"))
+        (200, "Response", URL("http://example.com"))
 
         async def mock_async_query(
             uri,
@@ -490,7 +487,7 @@ class TestPulseQueryManager:
             timeout=1,
             requires_authentication=True,
         ):
-            backoff = PulseBackoff(
+            PulseBackoff(
                 "Query:GET /api/data",
                 connection_status.get_backoff().initial_backoff_interval,
                 threshold=0,

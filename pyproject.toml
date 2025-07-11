@@ -24,7 +24,6 @@ lxml = "^5.1.0"
 aiohttp-zlib-ng = ">=0.1.1"
 aioresponses = "^0.7.3"
 
-
 [tool.poetry.urls]
 "Changelog" = "https://github.com/rlippmann/pyadtpulse/blob/master/CHANGELOG.md"
 "Issues" = "https://github.com/rlippmann/pyadtpulse/issues"

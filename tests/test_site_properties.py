@@ -182,7 +182,7 @@ class TestADTPulseSiteProperties:
         result = await site_properties.async_update()
 
         # Assert
-        assert result == False
+        assert result is False
 
     # Cannot set alarm status from one state to another
     @pytest.mark.asyncio
@@ -205,7 +205,7 @@ class TestADTPulseSiteProperties:
         )
 
         # Assert
-        assert result == False
+        assert result is False
 
     # Failed updating ADT Pulse alarm to new mode
     @pytest.mark.asyncio
@@ -225,7 +225,7 @@ class TestADTPulseSiteProperties:
         result = await site_properties.alarm_control_panel._arm(None, "new_mode", False)
 
         # Assert
-        assert result == False
+        assert result is False
 
     # Retrieve last update time with invalid input
     def test_retrieve_last_update_invalid_input(self):
