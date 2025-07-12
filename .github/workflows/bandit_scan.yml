@@ -19,7 +19,7 @@ jobs:
 
       - name: Run Bandit
         run: |
-          uv run bandit --configfile pyproject.toml -recursive . -format sarif -output results.sarif || true
+          uv run bandit --configfile pyproject.toml --recursive . --format sarif --output results.sarif || true
 
       - name: Upload SARIF report
         uses: github/codeql-action/upload-sarif@v3
