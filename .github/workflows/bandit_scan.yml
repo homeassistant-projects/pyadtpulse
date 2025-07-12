@@ -15,4 +15,4 @@ jobs:
       - name: Perform Bandit Analysis
         uses: PyCQA/bandit-action@v1
         with:
-          config-file: pyproject.toml
+          configfile: pyproject.toml
