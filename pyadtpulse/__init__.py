@@ -6,7 +6,7 @@ import time
 from threading import RLock, Thread
 from warnings import warn
 
-import aiohttp_zlib_ng
+import aiohttp_fast_zlib
 import uvloop
 
 from .const import (
@@ -18,7 +18,8 @@ from .const import (
 from .pyadtpulse_async import SYNC_CHECK_TASK_NAME, PyADTPulseAsync
 from .util import DebugRLock, set_debug_lock
 
-aiohttp_zlib_ng.enable_zlib_ng()
+
+aiohttp_fast_zlib.enable()
 LOG = logging.getLogger(__name__)
 
 

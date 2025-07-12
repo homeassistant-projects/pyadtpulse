@@ -63,16 +63,20 @@ wheels = [
 ]
 
 [[package]]
-name = "aiohttp-zlib-ng"
-version = "0.3.2"
+name = "aiohttp-fast-zlib"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
-    { name = "zlib-ng" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d4/ce/db1c0689a6f822f90ef32722a6ca5874436ed8d19b59db61ec6a00ac3e81/aiohttp_zlib_ng-0.3.2.tar.gz", hash = "sha256:e6a7ad369b1275924bdb61d35b24cac738ae403679f146f142f99a8dcfb20945", size = 8362, upload-time = "2024-06-24T11:53:32.256Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/a6/982f3a013b42e914a2420631afcaecb729c49525cc6cc58e15d27ee4cb4b/aiohttp_fast_zlib-0.3.0.tar.gz", hash = "sha256:963a09de571b67fa0ef9cb44c5a32ede5cb1a51bc79fc21181b1cddd56b58b28", size = 8770, upload-time = "2025-06-07T12:41:49.161Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/24/11/99c7aee1180da7c1be1566bfec80a9d7764b78c0f46d086cc784ad4eecc9/aiohttp_zlib_ng-0.3.2-py3-none-any.whl", hash = "sha256:9dcc3540e51b629ebb670e66b9e572bed063b5957f27469448dcfa865529af9c", size = 8087, upload-time = "2024-06-24T11:53:30.646Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/11/ea9ecbcd6cf68c5de690fd39b66341405ab091aa0c3598277e687aa65901/aiohttp_fast_zlib-0.3.0-py3-none-any.whl", hash = "sha256:d4cb20760a3e1137c93cb42c13871cbc9cd1fdc069352f2712cd650d6c0e537e", size = 8615, upload-time = "2025-06-07T12:41:47.454Z" },
+]
+
+[package.optional-dependencies]
+zlib-ng = [
+    { name = "zlib-ng" },
 ]
 
 [[package]]
@@ -716,7 +720,7 @@ version = "1.2.11"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
-    { name = "aiohttp-zlib-ng" },
+    { name = "aiohttp-fast-zlib", extra = ["zlib-ng"] },
     { name = "lxml" },
     { name = "uvloop" },
 ]
@@ -738,7 +742,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.12.14" },
-    { name = "aiohttp-zlib-ng", specifier = ">=0.3.2" },
+    { name = "aiohttp-fast-zlib", extras = ["zlib-ng"], specifier = ">=0.3.0" },
     { name = "lxml", specifier = ">=6.0.0" },
     { name = "uvloop", specifier = ">=0.21.0" },
 ]
