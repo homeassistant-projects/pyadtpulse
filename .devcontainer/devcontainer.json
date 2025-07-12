@@ -15,7 +15,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "uv venv && uv add -r requirements.txt -r test-requirements.txt"
+	"postCreateCommand": "uv venv && source ./venv/bin/activate && uv add -r requirements.txt -r test-requirements.txt"
 
 	// Configure tool-specific properties.
 	// "customizations": {},
