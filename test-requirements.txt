@@ -1,2 +1,3 @@
 pytest_mock
 pytest-asyncio
+pytest-isolate
