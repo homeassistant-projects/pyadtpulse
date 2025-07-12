@@ -36,3 +36,10 @@ dev = [
     "twine>=6.1.0",
     "typeguard>=4.4.4",
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+# Only run high severity issues
+severity = "high"
+# Only run high confidence issues
+confidence = "high"
