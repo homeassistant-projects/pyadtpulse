@@ -80,6 +80,19 @@ zlib-ng = [
 ]
 
 [[package]]
+name = "aiohttp-zlib-ng"
+version = "0.3.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "zlib-ng" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d4/ce/db1c0689a6f822f90ef32722a6ca5874436ed8d19b59db61ec6a00ac3e81/aiohttp_zlib_ng-0.3.2.tar.gz", hash = "sha256:e6a7ad369b1275924bdb61d35b24cac738ae403679f146f142f99a8dcfb20945", size = 8362, upload-time = "2024-06-24T11:53:32.256Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/24/11/99c7aee1180da7c1be1566bfec80a9d7764b78c0f46d086cc784ad4eecc9/aiohttp_zlib_ng-0.3.2-py3-none-any.whl", hash = "sha256:9dcc3540e51b629ebb670e66b9e572bed063b5957f27469448dcfa865529af9c", size = 8087, upload-time = "2024-06-24T11:53:30.646Z" },
+]
+
+[[package]]
 name = "aioresponses"
 version = "0.7.8"
 source = { registry = "https://pypi.org/simple" }
@@ -245,6 +258,15 @@ wheels = [
 ]
 
 [[package]]
+name = "dill"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/12/80/630b4b88364e9a8c8c5797f4602d0f76ef820909ee32f0bacb9f90654042/dill-0.4.0.tar.gz", hash = "sha256:0633f1d2df477324f53a895b02c901fb961bdbf65a17122586ea7019292cbcf0", size = 186976, upload-time = "2025-04-16T00:41:48.867Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/3d/9373ad9c56321fdab5b41197068e1d8c25883b3fea29dd361f9b55116869/dill-0.4.0-py3-none-any.whl", hash = "sha256:44f54bf6412c2c8464c14e8243eb163690a9800dbe2c367330883b19c7561049", size = 119668, upload-time = "2025-04-16T00:41:47.671Z" },
+]
+
+[[package]]
 name = "distlib"
 version = "0.3.9"
 source = { registry = "https://pypi.org/simple" }
@@ -273,14 +295,14 @@ wheels = [
 
 [[package]]
 name = "freezegun"
-version = "1.5.2"
+version = "1.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "python-dateutil" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c7/75/0455fa5029507a2150da59db4f165fbc458ff8bb1c4f4d7e8037a14ad421/freezegun-1.5.2.tar.gz", hash = "sha256:a54ae1d2f9c02dbf42e02c18a3ab95ab4295818b549a34dac55592d72a905181", size = 34855, upload-time = "2025-05-24T12:38:47.051Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/1a/99a52c2df5d1b9b20ca1b253beb1ea412cb263d9cc670edd5a52595b7083/freezegun-1.5.3.tar.gz", hash = "sha256:d7c6204e33a50affd7c7aa284f4f92e04e96f72d63313b89ceaaf60d9c64bc5e", size = 35484, upload-time = "2025-07-12T18:39:40.592Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/b2/68d4c9b6431121b6b6aa5e04a153cac41dcacc79600ed6e2e7c3382156f5/freezegun-1.5.2-py3-none-any.whl", hash = "sha256:5aaf3ba229cda57afab5bd311f0108d86b6fb119ae89d2cd9c43ec8c1733c85b", size = 18715, upload-time = "2025-05-24T12:38:45.274Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/fe/fda2d2dccda9b5eac3a7d00dea11efcbb776b00c4f1b471e0c3a26c9c751/freezegun-1.5.3-py3-none-any.whl", hash = "sha256:1ce20ee4be61349ba52c3af64f5eaba8d08ff51acfcf1b3ea671f03e54c818f1", size = 19062, upload-time = "2025-07-12T18:39:39.333Z" },
 ]
 
 [[package]]
@@ -721,7 +743,14 @@ source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "aiohttp-fast-zlib", extra = ["zlib-ng"] },
+    { name = "aiohttp-zlib-ng" },
+    { name = "aioresponses" },
+    { name = "freezegun" },
     { name = "lxml" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-isolate" },
+    { name = "pytest-mock" },
+    { name = "typeguard" },
     { name = "uvloop" },
 ]
 
@@ -741,9 +770,16 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiohttp", specifier = ">=3.12.14" },
+    { name = "aiohttp", specifier = ">=3.9.1" },
     { name = "aiohttp-fast-zlib", extras = ["zlib-ng"], specifier = ">=0.3.0" },
-    { name = "lxml", specifier = ">=6.0.0" },
+    { name = "aiohttp-zlib-ng", specifier = ">=0.1.1" },
+    { name = "aioresponses", specifier = ">=0.7.3" },
+    { name = "freezegun", specifier = ">=1.5.3" },
+    { name = "lxml", specifier = ">=5.1.0" },
+    { name = "pytest-asyncio", specifier = ">=1.0.0" },
+    { name = "pytest-isolate", specifier = ">=0.0.12" },
+    { name = "pytest-mock", specifier = ">=3.14.1" },
+    { name = "typeguard", specifier = ">=4.1.5" },
     { name = "uvloop", specifier = ">=0.21.0" },
 ]
 
@@ -814,6 +850,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d0/d4/14f53324cb1a6381bef29d698987625d80052bb33932d8e7cbf9b337b17c/pytest_asyncio-1.0.0.tar.gz", hash = "sha256:d15463d13f4456e1ead2594520216b225a16f781e144f8fdf6c5bb4667c48b3f", size = 46960, upload-time = "2025-05-26T04:54:40.484Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/30/05/ce271016e351fddc8399e546f6e23761967ee09c8c568bbfbecb0c150171/pytest_asyncio-1.0.0-py3-none-any.whl", hash = "sha256:4f024da9f1ef945e680dc68610b52550e36590a67fd31bb3b4943979a1f90ef3", size = 15976, upload-time = "2025-05-26T04:54:39.035Z" },
+]
+
+[[package]]
+name = "pytest-isolate"
+version = "0.0.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dill" },
+    { name = "filelock" },
+    { name = "pytest" },
+    { name = "tblib" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2a/83/318942d7dfb65c02df433f95437cf58612ffcb8a8ec0a3a948c2bf5760ab/pytest_isolate-0.0.12.tar.gz", hash = "sha256:2a421a8334e5d2fffe3b7475443c61616346759585f3b23de24c9d9a7784fa89", size = 14572, upload-time = "2025-06-08T17:56:48.41Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7f/b6/dd275b04a4c8488f23b532074e735c4131fac97fc21f8aa3481e3183f3ed/pytest_isolate-0.0.12-py3-none-any.whl", hash = "sha256:b39a109985bedd4d9e1cd9e4b84ff4b5e7cfa372b3d3e6b9bef89ff54015908f", size = 13609, upload-time = "2025-06-08T17:56:47.135Z" },
 ]
 
 [[package]]
@@ -983,6 +1034,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "tblib"
+version = "3.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/95/4b3044ec4bf248186769629bbfb495a458deb6e4c1f9eff7f298ae1e336e/tblib-3.1.0.tar.gz", hash = "sha256:06404c2c9f07f66fee2d7d6ad43accc46f9c3361714d9b8426e7f47e595cd652", size = 30766, upload-time = "2025-03-31T12:58:27.473Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/27/44/aa5c8b10b2cce7a053018e0d132bd58e27527a0243c4985383d5b6fd93e9/tblib-3.1.0-py3-none-any.whl", hash = "sha256:670bb4582578134b3d81a84afa1b016128b429f3d48e6cbbaecc9d15675e984e", size = 12552, upload-time = "2025-03-31T12:58:26.142Z" },
 ]
 
 [[package]]
