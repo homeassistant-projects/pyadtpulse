@@ -61,3 +61,9 @@ the requires-python field in pyproject.toml is used by uv to determine functioni
 if the python version needs to be updated, the exact version to use should be updated in .python-version, and the pyproject.toml should be reviewed to ensure its criteria works with the .python-version
 
 for example: if the pyproject.toml has requires-python == "3.13.3" and .python-version = 3.13.4, there will be issues.
+
+
+### Distribute New Python Package to PyPi
+
+uv build
+uv publish --token {{pypi_secret}}
