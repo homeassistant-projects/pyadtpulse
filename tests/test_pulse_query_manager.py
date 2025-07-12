@@ -13,7 +13,7 @@ from aioresponses import aioresponses
 from freezegun.api import FrozenDateTimeFactory, StepTickTimeFactory
 from lxml import html
 
-from conftest import MOCKED_API_VERSION
+from tests.conftest import MOCKED_API_VERSION
 from pyadtpulse.const import ADT_ORB_URI, DEFAULT_API_HOST
 from pyadtpulse.exceptions import (
     PulseClientConnectionError,

@@ -12,7 +12,7 @@ import pytest
 from aioresponses import aioresponses
 from pytest_mock import MockerFixture
 
-from conftest import LoginType, add_custom_response, add_logout, add_signin
+from tests.conftest import LoginType, add_custom_response, add_logout, add_signin
 from pyadtpulse.const import (
     ADT_DEFAULT_POLL_INTERVAL,
     ADT_DEVICE_URI,

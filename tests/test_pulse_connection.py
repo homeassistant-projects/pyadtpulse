@@ -6,7 +6,7 @@ import datetime
 import pytest
 from lxml import html
 
-from conftest import LoginType, add_custom_response, add_signin
+from tests.conftest import LoginType, add_custom_response, add_signin
 from pyadtpulse.const import ADT_LOGIN_URI, DEFAULT_API_HOST
 from pyadtpulse.exceptions import (
     PulseAccountLockedError,
