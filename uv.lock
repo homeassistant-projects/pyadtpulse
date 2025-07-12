@@ -777,7 +777,6 @@ source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "aiohttp-fast-zlib", extra = ["zlib-ng"] },
-    { name = "bandit", extra = ["sarif"] },
     { name = "lxml" },
     { name = "uvloop" },
 ]
@@ -785,6 +784,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "aioresponses" },
+    { name = "bandit", extra = ["sarif"] },
     { name = "build" },
     { name = "freezegun" },
     { name = "pre-commit" },
@@ -800,7 +800,6 @@ dev = [
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.12.14" },
     { name = "aiohttp-fast-zlib", extras = ["zlib-ng"], specifier = ">=0.3.0" },
-    { name = "bandit", extras = ["sarif", "toml"], specifier = ">=1.8.6" },
     { name = "lxml", specifier = ">=6.0.0" },
     { name = "uvloop", specifier = ">=0.21.0" },
 ]
@@ -808,6 +807,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "aioresponses", specifier = ">=0.7.8" },
+    { name = "bandit", extras = ["sarif", "toml"], specifier = ">=1.8.6" },
     { name = "build", specifier = ">=1.2.2.post1" },
     { name = "freezegun", specifier = ">=1.5.2" },
     { name = "pre-commit", specifier = ">=4.2.0" },

@@ -19,7 +19,6 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "aiohttp>=3.12.14",
     "aiohttp-fast-zlib[zlib-ng]>=0.3.0",
-    "bandit[sarif,toml]>=1.8.6",
     "lxml>=6.0.0",
     "uvloop>=0.21.0",
 ]
@@ -27,6 +26,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "aioresponses>=0.7.8",
+    "bandit[sarif,toml]>=1.8.6",
     "build>=1.2.2.post1",
     "freezegun>=1.5.2",
     "pre-commit>=4.2.0",
