@@ -6,20 +6,15 @@ build-backend = "hatchling.build"
 name = "pyadtpulse"
 version = "1.2.11"
 description = "Python interface for ADT Pulse security systems"
-authors = [
-    {name = "Ryan Snodgrass"}
-    ]
-maintainers = [
-    {name = "Robert Lippmann"}
-    ]
+authors = [{ name = "Ryan Snodgrass" }]
+maintainers = [{ name = "Robert Lippmann" }]
 readme = "README.md"
 license = "Apache-2.0"
-repository = "https://github.com/homeassistant-projects/pyadtpulse"
 classifiers = [
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: OS Independent"
-    ]
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
 requires-python = ">=3.12,<3.14"
 dependencies = [
     "aiohttp>=3.12.14",
