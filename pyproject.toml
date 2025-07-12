@@ -20,7 +20,7 @@ classifiers = [
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent"
     ]
-requires-python = "~=3.13"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "aiohttp>=3.12.14",
     "aiohttp-zlib-ng>=0.3.2", #need to upgrade. depricated https://github.com/Bluetooth-Devices/aiohttp-fast-zlib
