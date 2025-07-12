@@ -9,7 +9,7 @@ from aiohttp.client_exceptions import ClientConnectionError, ServerDisconnectedE
 from aiohttp.client_reqrep import ConnectionKey
 from yarl import URL
 
-from conftest import MOCKED_API_VERSION
+from tests.conftest import MOCKED_API_VERSION
 from pyadtpulse.exceptions import (
     PulseClientConnectionError,
     PulseNotLoggedInError,

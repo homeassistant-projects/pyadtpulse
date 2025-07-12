@@ -3,7 +3,7 @@
 import pytest
 from lxml import html
 
-from conftest import LoginType, add_signin
+from tests.conftest import LoginType, add_signin
 from pyadtpulse.exceptions import PulseAuthenticationError, PulseNotLoggedInError
 from pyadtpulse.pyadtpulse_async import PyADTPulseAsync
 from pyadtpulse.site import ADTPulseSite
