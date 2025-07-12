@@ -1,5 +1,3 @@
-# see https://github.com/marketplace/actions/publish-python-poetry-package
-
 name: Upload Release to PyPi
 
 on:

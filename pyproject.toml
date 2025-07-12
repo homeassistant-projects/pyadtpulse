@@ -33,6 +33,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "aioresponses>=0.7.8",
+    "bandit[sarif,toml]>=1.8.6",
     "build>=1.2.2.post1",
     "freezegun>=1.5.2",
     "pre-commit>=4.2.0",
@@ -43,3 +44,6 @@ dev = [
     "twine>=6.1.0",
     "typeguard>=4.4.4",
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]

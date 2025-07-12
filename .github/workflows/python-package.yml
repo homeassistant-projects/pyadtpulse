@@ -1,7 +1,6 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+# This workflow will install Python dependencies and run tests with supported Python versions
 
-name: Test Multiple Python Versions
+name: Test with Supported Python Versions
 
 on:
   push:
