@@ -55,7 +55,7 @@ class TestPyADTPulseAsync:
     @pytest.mark.asyncio
     async def test_instantiation_without_parameters(self):
         with pytest.raises(TypeError):
-            pulse = PyADTPulseAsync()
+            PyADTPulseAsync()
 
     # The async_login method fails to authenticate the user to the ADT Pulse cloud service and raises a PulseAuthenticationError.
     @pytest.mark.asyncio
@@ -131,7 +131,7 @@ class TestPyADTPulseAsync:
             LoginType.SUCCESS, mocked_server_responses, get_mocked_url, read_file
         )
         await pulse.async_login()
-        assert pulse.is_connected == True
+        assert pulse.is_connected is True
 
     # The site property is accessed without being logged in and raises an exception.
     @pytest.mark.asyncio
@@ -179,7 +179,7 @@ class TestPyADTPulseAsync:
             password="your_password",
             fingerprint="your_fingerprint",
         )
-        assert pulse.is_connected == False
+        assert pulse.is_connected is False
 
     # The sites property is accessed without being logged in and raises an exception.
     @pytest.mark.asyncio

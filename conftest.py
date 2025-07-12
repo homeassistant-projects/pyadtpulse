@@ -63,8 +63,7 @@ def read_file():
     """
 
     def _read_file(file_name: str) -> str:
-        file_path = test_file_dir / file_name
-        return file_path.read_text(encoding="utf-8")
+        return (test_file_dir / file_name).read_text(encoding="utf-8")
 
     return _read_file
 

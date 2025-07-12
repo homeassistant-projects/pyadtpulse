@@ -240,16 +240,16 @@ async def run_query_exception_test(
         )
 
     # only MAX_REQUERY_RETRIES - 1 sleeps since first call won't sleep
-    assert (
-        mock_sleep.call_count == MAX_REQUERY_RETRIES - 1
-    ), f"Failure on exception {aiohttp_exception.__name__}"
+    assert mock_sleep.call_count == MAX_REQUERY_RETRIES - 1, (
+        f"Failure on exception {aiohttp_exception.__name__}"
+    )
     for i in range(MAX_REQUERY_RETRIES - 1):
-        assert mock_sleep.call_args_list[i][0][0] == 1 * 2 ** (
-            i
-        ), f"Failure on exception sleep count {i} on exception {aiohttp_exception.__name__}"
-    assert (
-        s.get_backoff().backoff_count == 1
-    ), f"Failure on exception {aiohttp_exception.__name__}"
+        assert mock_sleep.call_args_list[i][0][0] == 1 * 2 ** (i), (
+            f"Failure on exception sleep count {i} on exception {aiohttp_exception.__name__}"
+        )
+    assert s.get_backoff().backoff_count == 1, (
+        f"Failure on exception {aiohttp_exception.__name__}"
+    )
     with pytest.raises(pulse_exception):
         await p.async_query(ADT_ORB_URI, requires_authentication=False)
     # pqm backoff should trigger here

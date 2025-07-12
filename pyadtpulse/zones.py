@@ -141,12 +141,15 @@ class ADTPulseZones(UserDict):
 
     @typechecked
     def update_status(self, key: int, status: str) -> None:
-        """Update zone status.
+        (
+            """Update zone status.
 
         Args:
             key (int): zone id to change
             status (str): status to set
-        """ """"""
+        """
+            """"""
+        )
         temp = self._get_zonedata(key)
         temp.status = status
         self.__setitem__(key, temp)

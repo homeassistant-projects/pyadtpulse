@@ -19,10 +19,8 @@ sensors, door sensors, etc) as well as arming and disarming individual sites.
 NOTE: Since this interacts with the unofficial ADT Pulse AJAX web service, the
 behavior is subject to change by ADT without notice.
 
-## Developer Note
-
-NOTE: This package use [pre-commit](https://pre-commit.com/) hooks for maintaining code quality.
-Please install pre-commit and enable it for your local git copy before committing.
+## Making Contributions
+Want to contribute? See the [Development](./DEVELOPMENT.md) documentation for setup instructions.
 
 ## WARNING
 
@@ -31,7 +29,7 @@ Do not reauthenticate to the ADT service frequently as ADT's service is not desi
 ## Installation
 
 ```
-pip3 install pyadtpulse
+pip install pyadtpulse
 ```
 
 ## Usage
@@ -107,15 +105,15 @@ The browser fingerprint will change with a browser/OS upgrade.  While it is not 
 
 There are 2 ways to determine this fingerprint:
 
-1. Visit [this link](https://rawcdn.githack.com/rlippmann/pyadtpulse/b3a0e7097e22446623d170f0a971726fbedb6a2d/doc/browser_fingerprint.html) using the same browser you used to authenticate with ADT Pulse. This should determine the correct browser fingerprint
+1. Visit [this link](https://rawcdn.githack.com/homeassistant-projects/pyadtpulse/5fe719d2bea2b6e68aec0588c4d92f363223424d/doc/browser_fingerprint.html) using the same browser you used to authenticate with ADT Pulse. This should determine the correct browser fingerprint
 
 2. Follow the instructions [here](https://github.com/mrjackyliang/homebridge-adt-pulse#configure-2-factor-authentication)
 
 ## See Also
 
 - [ADT Pulse Portal](https://portal.adtpulse.com/)
-- [Home Assistant ADT Pulse integration](https://github.com/rsnodgrass/hass-adtpulse/)
-- [adt-pulse-mqtt](https://github.com/haruny/adt-pulse-mqtt) – MQTT integration with ADT Pulse alarm panels
+- [Home Assistant ADT Pulse integration](https://github.com/homeassistant-projects/hass-adtpulse)
+- [adt-pulse-mqtt](https://github.com/adt-pulse-mqtt/adt-pulse-mqtt) – MQTT integration with ADT Pulse alarm panels
 
 ## Future Enhancements
 

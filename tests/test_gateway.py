@@ -25,24 +25,24 @@ def test_default_values():
     )
     assert gateway.backoff._backoff_count == 0
     assert gateway.backoff._expiration_time == 0.0
-    assert gateway.backoff._detailed_debug_logging == False
+    assert gateway.backoff._detailed_debug_logging is False
     assert gateway.backoff._threshold == 0
-    assert gateway.model == None
-    assert gateway.serial_number == None
+    assert gateway.model is None
+    assert gateway.serial_number is None
     assert gateway.next_update == 0
     assert gateway.last_update == 0
-    assert gateway.firmware_version == None
-    assert gateway.hardware_version == None
-    assert gateway.primary_connection_type == None
-    assert gateway.broadband_connection_status == None
-    assert gateway.cellular_connection_status == None
+    assert gateway.firmware_version is None
+    assert gateway.hardware_version is None
+    assert gateway.primary_connection_type is None
+    assert gateway.broadband_connection_status is None
+    assert gateway.cellular_connection_status is None
     assert gateway._cellular_connection_signal_strength == 0.0
-    assert gateway.broadband_lan_ip_address == None
-    assert gateway._broadband_lan_mac == None
-    assert gateway.device_lan_ip_address == None
-    assert gateway._device_lan_mac == None
-    assert gateway.router_lan_ip_address == None
-    assert gateway.router_wan_ip_address == None
+    assert gateway.broadband_lan_ip_address is None
+    assert gateway._broadband_lan_mac is None
+    assert gateway.device_lan_ip_address is None
+    assert gateway._device_lan_mac is None
+    assert gateway.router_lan_ip_address is None
+    assert gateway.router_wan_ip_address is None
 
 
 # is_online property returns correct online status
@@ -51,11 +51,11 @@ def test_is_online_property():
     Test that is_online property returns correct online status
     """
     gateway = ADTPulseGateway()
-    assert gateway.is_online == False
+    assert gateway.is_online is False
     gateway.is_online = True
-    assert gateway.is_online == True
+    assert gateway.is_online is True
     gateway.is_online = False
-    assert gateway.is_online == False
+    assert gateway.is_online is False
 
 
 # poll_interval property can be set and returns correct value
@@ -149,7 +149,7 @@ def test_is_online_returns_correct_offline_status_when_set_to_false():
     """
     gateway = ADTPulseGateway()
     gateway.is_online = False
-    assert gateway.is_online == False
+    assert gateway.is_online is False
 
 
 # poll_interval property raises ValueError when set to 0
@@ -268,12 +268,12 @@ def test_is_online_property_true_and_false():
 
     # Test setting is_online to True
     gateway.is_online = True
-    assert gateway.is_online == True
+    assert gateway.is_online is True
     assert gateway._status_text == "ONLINE"
 
     # Test setting is_online to False
     gateway.is_online = False
-    assert gateway.is_online == False
+    assert gateway.is_online is False
     assert gateway._status_text == "OFFLINE"
 
 
@@ -323,7 +323,7 @@ def test_custom_values():
     )
     assert gateway.backoff._backoff_count == 0
     assert gateway.backoff._expiration_time == 0.0
-    assert gateway.backoff._detailed_debug_logging == False
+    assert gateway.backoff._detailed_debug_logging is False
     assert gateway.backoff._threshold == 0
     assert gateway.model == "Custom Model"
     assert gateway.serial_number == "Custom Serial Number"

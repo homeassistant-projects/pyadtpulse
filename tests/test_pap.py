@@ -260,7 +260,7 @@ class TestPulseAuthenticationProperties:
 
         # Act and Assert
         with pytest.raises(ValueError):
-            properties = PulseAuthenticationProperties(username, password, fingerprint)
+            PulseAuthenticationProperties(username, password, fingerprint)
 
     # Raise TypeError when setting site_id property with non-string value
     def test_raise_type_error_when_setting_site_id_with_non_string_value(self):

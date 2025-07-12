@@ -1,7 +1,4 @@
 ---
-# pre-commit autoupdate
-# pre-commit run --all-files
-
 fail_fast: true
 
 repos:
@@ -13,16 +10,11 @@ repos:
       - id: requirements-txt-fixer
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.12
+    rev: v0.12.3
     hooks:
       - id: ruff
-        args: [ --fix ]  # run linter
-      - id: ruff-format  # run formatter
-
-  - repo: https://github.com/dosisod/refurb
-    rev: v2.1.0
-    hooks:
-      - id: refurb
+        args: [--fix] # run linter
+      - id: ruff-format # run formatter
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.20.0

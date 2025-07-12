@@ -304,7 +304,7 @@ def check_updates(site: ADTPulseSite, adt: PyADTPulse, run_alarm_test: bool) -> 
             sleep(1)
     print(f"Gateway online: {adt.site.gateway.is_online}")
     if adt.update():
-        print("ADT Data updated, at " f"{site.last_updated}, refreshing")
+        print(f"ADT Data updated, at {site.last_updated}, refreshing")
         return True
     print("Site update failed")
     return False

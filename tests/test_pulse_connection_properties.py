@@ -329,11 +329,8 @@ class TestPulseConnectionProperties:
             host, user_agent, detailed_debug_logging, debug_locks
         )
 
-        # Act
-        api_version = connection_properties.get_api_version(response_path)
-
-        # Assert
-        assert api_version is None
+        # Act and Assert
+        assert connection_properties.get_api_version(response_path) is None
 
     # Get the session with a valid host
     @pytest.mark.asyncio
