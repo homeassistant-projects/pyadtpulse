@@ -12,7 +12,11 @@ jobs:
       # required for all workflows
       security-events: write
     steps:
-      - name: Perform Bandit Analysis
-        uses: PyCQA/bandit-action@v1
-        with:
-          configfile: pyproject.toml
+      - uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run Bandit
+        run: |
+          uv run bandit --configfile pyproject.toml -r .
