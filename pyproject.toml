@@ -19,6 +19,7 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "aiohttp>=3.12.14",
     "aiohttp-fast-zlib[zlib-ng]>=0.3.0",
+    "bandit[toml]>=1.8.6",
     "lxml>=6.0.0",
     "uvloop>=0.21.0",
 ]
@@ -38,8 +39,4 @@ dev = [
 ]
 
 [tool.bandit]
-exclude_dirs = ["tests"]
-# Only run high severity issues
-severity = "high"
-# Only run high confidence issues
-confidence = "high"
+exclude_dirs = ["tests", ".venv"]
