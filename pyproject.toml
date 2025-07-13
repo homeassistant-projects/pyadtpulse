@@ -61,6 +61,8 @@ lint.ignore = [
     "D212", #multi-line-summary-first-line
 ]
 
+exclude = ["example-client.py"]
+
 [tool.ruff.format]
 quote-style = "double" # Matches black
 line-ending = "lf"     # Matches black
