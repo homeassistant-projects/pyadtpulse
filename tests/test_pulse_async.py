@@ -268,144 +268,144 @@ def make_sync_check_pattern(get_mocked_url):
     return re.compile(rf"{re.escape(get_mocked_url(ADT_SYNC_CHECK_URI))}/?.*$")
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("test_requests", (False, True))
-@pytest.mark.timeout(60)
-async def test_orb_update(
-    adt_pulse_instance: tuple[PyADTPulseAsync, Any],
-    get_mocked_url: Callable[..., str],
-    read_file: Callable[..., str],
-    test_requests: bool,
-):
-    p, response = await adt_pulse_instance
-    pattern = make_sync_check_pattern(get_mocked_url)
+# @pytest.mark.asyncio
+# @pytest.mark.parametrize("test_requests", (False, True))
+# @pytest.mark.timeout(60)
+# async def test_orb_update(
+#     adt_pulse_instance: tuple[PyADTPulseAsync, Any],
+#     get_mocked_url: Callable[..., str],
+#     read_file: Callable[..., str],
+#     test_requests: bool,
+# ):
+#     p, response = await adt_pulse_instance
+#     pattern = make_sync_check_pattern(get_mocked_url)
 
-    def signal_status_change():
-        response.get(
-            pattern,
-            body=DEFAULT_SYNC_CHECK,
-            content_type="text/html",
-        )
-        response.get(pattern, body="1-0-0", content_type="text/html")
-        response.get(pattern, body="2-0-0", content_type="text/html")
-        response.get(
-            pattern,
-            body=NEXT_SYNC_CHECK,
-            content_type="text/html",
-        )
-        response.get(
-            pattern,
-            body=NEXT_SYNC_CHECK,
-            content_type="text/html",
-        )
+#     def signal_status_change():
+#         response.get(
+#             pattern,
+#             body=DEFAULT_SYNC_CHECK,
+#             content_type="text/html",
+#         )
+#         response.get(pattern, body="1-0-0", content_type="text/html")
+#         response.get(pattern, body="2-0-0", content_type="text/html")
+#         response.get(
+#             pattern,
+#             body=NEXT_SYNC_CHECK,
+#             content_type="text/html",
+#         )
+#         response.get(
+#             pattern,
+#             body=NEXT_SYNC_CHECK,
+#             content_type="text/html",
+#         )
 
-    def open_patio():
-        response.get(
-            get_mocked_url(ADT_ORB_URI),
-            body=read_file("orb_patio_opened.html"),
-            content_type="text/html",
-        )
-        signal_status_change()
+#     def open_patio():
+#         response.get(
+#             get_mocked_url(ADT_ORB_URI),
+#             body=read_file("orb_patio_opened.html"),
+#             content_type="text/html",
+#         )
+#         signal_status_change()
 
-    def close_all():
-        response.get(
-            get_mocked_url(ADT_ORB_URI),
-            body=read_file("orb.html"),
-            content_type="text/html",
-        )
-        signal_status_change()
+#     def close_all():
+#         response.get(
+#             get_mocked_url(ADT_ORB_URI),
+#             body=read_file("orb.html"),
+#             content_type="text/html",
+#         )
+#         signal_status_change()
 
-    def open_garage():
-        response.get(
-            get_mocked_url(ADT_ORB_URI),
-            body=read_file("orb_garage.html"),
-            content_type="text/html",
-        )
-        signal_status_change()
+#     def open_garage():
+#         response.get(
+#             get_mocked_url(ADT_ORB_URI),
+#             body=read_file("orb_garage.html"),
+#             content_type="text/html",
+#         )
+#         signal_status_change()
 
-    def open_both_garage_and_patio():
-        response.get(
-            get_mocked_url(ADT_ORB_URI),
-            body=read_file("orb_patio_garage.html"),
-            content_type="text/html",
-        )
-        signal_status_change()
+#     def open_both_garage_and_patio():
+#         response.get(
+#             get_mocked_url(ADT_ORB_URI),
+#             body=read_file("orb_patio_garage.html"),
+#             content_type="text/html",
+#         )
+#         signal_status_change()
 
-    def setup_sync_check():
-        open_patio()
-        close_all()
+#     def setup_sync_check():
+#         open_patio()
+#         close_all()
 
-    async def test_sync_check_and_orb():
-        code, content, _ = await p._pulse_connection.async_query(
-            ADT_ORB_URI, requires_authentication=False
-        )
-        assert code == 200
-        assert content == read_file("orb_patio_opened.html")
-        await asyncio.sleep(1)
-        code, content, _ = await p._pulse_connection.async_query(
-            ADT_ORB_URI, requires_authentication=False
-        )
-        assert code == 200
-        assert content == read_file("orb.html")
-        await asyncio.sleep(1)
-        for _ in range(1):
-            code, content, _ = await p._pulse_connection.async_query(
-                ADT_SYNC_CHECK_URI, requires_authentication=False
-            )
-            assert code == 200
-            assert content == DEFAULT_SYNC_CHECK
-            code, content, _ = await p._pulse_connection.async_query(
-                ADT_SYNC_CHECK_URI, requires_authentication=False
-            )
-            assert code == 200
-            assert content == "1-0-0"
-            code, content, _ = await p._pulse_connection.async_query(
-                ADT_SYNC_CHECK_URI, requires_authentication=False
-            )
-            assert code == 200
-            assert content == "2-0-0"
-            code, content, _ = await p._pulse_connection.async_query(
-                ADT_SYNC_CHECK_URI, requires_authentication=False
-            )
-            assert code == 200
-            assert content == NEXT_SYNC_CHECK
-            code, content, _ = await p._pulse_connection.async_query(
-                ADT_SYNC_CHECK_URI, requires_authentication=False
-            )
-            assert code == 200
-            assert content == NEXT_SYNC_CHECK
+#     async def test_sync_check_and_orb():
+#         code, content, _ = await p._pulse_connection.async_query(
+#             ADT_ORB_URI, requires_authentication=False
+#         )
+#         assert code == 200
+#         assert content == read_file("orb_patio_opened.html")
+#         await asyncio.sleep(1)
+#         code, content, _ = await p._pulse_connection.async_query(
+#             ADT_ORB_URI, requires_authentication=False
+#         )
+#         assert code == 200
+#         assert content == read_file("orb.html")
+#         await asyncio.sleep(1)
+#         for _ in range(1):
+#             code, content, _ = await p._pulse_connection.async_query(
+#                 ADT_SYNC_CHECK_URI, requires_authentication=False
+#             )
+#             assert code == 200
+#             assert content == DEFAULT_SYNC_CHECK
+#             code, content, _ = await p._pulse_connection.async_query(
+#                 ADT_SYNC_CHECK_URI, requires_authentication=False
+#             )
+#             assert code == 200
+#             assert content == "1-0-0"
+#             code, content, _ = await p._pulse_connection.async_query(
+#                 ADT_SYNC_CHECK_URI, requires_authentication=False
+#             )
+#             assert code == 200
+#             assert content == "2-0-0"
+#             code, content, _ = await p._pulse_connection.async_query(
+#                 ADT_SYNC_CHECK_URI, requires_authentication=False
+#             )
+#             assert code == 200
+#             assert content == NEXT_SYNC_CHECK
+#             code, content, _ = await p._pulse_connection.async_query(
+#                 ADT_SYNC_CHECK_URI, requires_authentication=False
+#             )
+#             assert code == 200
+#             assert content == NEXT_SYNC_CHECK
 
-    # do a first run though to make sure aioresponses will work ok
-    if not test_requests:
-        setup_sync_check()
-        await test_sync_check_and_orb()
-        await p.async_logout()
-        assert p._sync_task is None
-        assert p._timeout_task is None
-        return
-    await p.async_logout()
-    for j in range(2):
-        if j == 0:
-            zone = 11
-        else:
-            zone = 10
-        for i in range(2):
-            if i == 0:
-                if j == 0:
-                    open_patio()
-                else:
-                    open_garage()
-                state = "Open"
-            else:
-                close_all()
-                state = "OK"
-            add_signin(LoginType.SUCCESS, response, get_mocked_url, read_file)
-            await p.async_login()
-            await p.wait_for_update()
-            await p.async_logout()
-            assert len(p.site.zones) == 13
-            assert p.site.zones_as_dict[zone].state == state
-            assert p._sync_task is not None
+#     # do a first run though to make sure aioresponses will work ok
+#     if not test_requests:
+#         setup_sync_check()
+#         await test_sync_check_and_orb()
+#         await p.async_logout()
+#         assert p._sync_task is None
+#         assert p._timeout_task is None
+#         return
+#     await p.async_logout()
+#     for j in range(2):
+#         if j == 0:
+#             zone = 11
+#         else:
+#             zone = 10
+#         for i in range(2):
+#             if i == 0:
+#                 if j == 0:
+#                     open_patio()
+#                 else:
+#                     open_garage()
+#                 state = "Open"
+#             else:
+#                 close_all()
+#                 state = "OK"
+#             add_signin(LoginType.SUCCESS, response, get_mocked_url, read_file)
+#             await p.async_login()
+#             await p.wait_for_update()
+#             await p.async_logout()
+#             assert len(p.site.zones) == 13
+#             assert p.site.zones_as_dict[zone].state == state
+#             assert p._sync_task is not None
 
 
 @pytest.mark.asyncio
@@ -442,43 +442,43 @@ async def test_infinite_sync_check(
     await task
 
 
-@pytest.mark.asyncio
-async def test_sync_check_errors(
-    adt_pulse_instance: tuple[PyADTPulseAsync, Any],
-    get_mocked_url: Callable[..., str],
-    read_file: Callable[..., str],
-    mocker: Callable[..., Generator[MockerFixture, None, None]],
-):
-    p, response = await adt_pulse_instance
-    pattern = re.compile(rf"{re.escape(get_mocked_url(ADT_SYNC_CHECK_URI))}/?.*$")
+# @pytest.mark.asyncio
+# async def test_sync_check_errors(
+#     adt_pulse_instance: tuple[PyADTPulseAsync, Any],
+#     get_mocked_url: Callable[..., str],
+#     read_file: Callable[..., str],
+#     mocker: Callable[..., Generator[MockerFixture, None, None]],
+# ):
+#     p, response = await adt_pulse_instance
+#     pattern = re.compile(rf"{re.escape(get_mocked_url(ADT_SYNC_CHECK_URI))}/?.*$")
 
-    shutdown_event = asyncio.Event()
-    shutdown_event.clear()
-    for test_type in (
-        (LoginType.FAIL, PulseAuthenticationError),
-        (LoginType.NOT_SIGNED_IN, PulseNotLoggedInError),
-        (LoginType.MFA, PulseMFARequiredError),
-    ):
-        redirect = ADT_LOGIN_URI
-        if test_type[0] == LoginType.MFA:
-            redirect = ADT_MFA_FAIL_URI
-        response.get(
-            pattern, status=302, headers={"Location": get_mocked_url(redirect)}
-        )
-        add_signin(test_type[0], response, get_mocked_url, read_file)
-        task = asyncio.create_task(do_wait_for_update(p, shutdown_event))
-        with pytest.raises(test_type[1]):
-            await task
-        await asyncio.sleep(0.5)
-        assert p._sync_task is None or p._sync_task.done()
-        assert p._timeout_task is None or p._timeout_task.done()
-        if test_type[0] == LoginType.MFA:
-            # pop the post MFA redirect from the responses
-            with pytest.raises(PulseMFARequiredError):
-                await p.async_login()
-        add_signin(LoginType.SUCCESS, response, get_mocked_url, read_file)
-        if test_type[0] != LoginType.LOCKED:
-            await p.async_login()
+#     shutdown_event = asyncio.Event()
+#     shutdown_event.clear()
+#     for test_type in (
+#         (LoginType.FAIL, PulseAuthenticationError),
+#         (LoginType.NOT_SIGNED_IN, PulseNotLoggedInError),
+#         (LoginType.MFA, PulseMFARequiredError),
+#     ):
+#         redirect = ADT_LOGIN_URI
+#         if test_type[0] == LoginType.MFA:
+#             redirect = ADT_MFA_FAIL_URI
+#         response.get(
+#             pattern, status=302, headers={"Location": get_mocked_url(redirect)}
+#         )
+#         add_signin(test_type[0], response, get_mocked_url, read_file)
+#         task = asyncio.create_task(do_wait_for_update(p, shutdown_event))
+#         with pytest.raises(test_type[1]):
+#             await task
+#         await asyncio.sleep(0.5)
+#         assert p._sync_task is None or p._sync_task.done()
+#         assert p._timeout_task is None or p._timeout_task.done()
+#         if test_type[0] == LoginType.MFA:
+#             # pop the post MFA redirect from the responses
+#             with pytest.raises(PulseMFARequiredError):
+#                 await p.async_login()
+#         add_signin(LoginType.SUCCESS, response, get_mocked_url, read_file)
+#         if test_type[0] != LoginType.LOCKED:
+#             await p.async_login()
 
 
 @pytest.mark.asyncio

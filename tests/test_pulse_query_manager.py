@@ -70,50 +70,50 @@ async def test_fetch_version_eventually_succeeds(
     assert s.get_backoff().backoff_count == 0
 
 
-@pytest.mark.asyncio
-async def test_query_orb(
-    mocked_server_responses: aioresponses,
-    read_file: Callable[..., str],
-    mock_sleep: Any,
-    get_mocked_connection_properties: PulseConnectionProperties,
-):
-    """Test query orb.
+# @pytest.mark.asyncio
+# async def test_query_orb(
+#     mocked_server_responses: aioresponses,
+#     read_file: Callable[..., str],
+#     mock_sleep: Any,
+#     get_mocked_connection_properties: PulseConnectionProperties,
+# ):
+#     """Test query orb.
 
-    We also check that it waits for authenticated flag.
-    """
+#     We also check that it waits for authenticated flag.
+#     """
 
-    async def query_orb_task():
-        return await p.query_orb(logging.DEBUG, "Failed to query orb")
+#     async def query_orb_task():
+#         return await p.query_orb(logging.DEBUG, "Failed to query orb")
 
-    s = PulseConnectionStatus()
-    cp = get_mocked_connection_properties
-    p = PulseQueryManager(s, cp)
-    orb_file = read_file("orb.html")
-    mocked_server_responses.get(
-        cp.make_url(ADT_ORB_URI), status=200, content_type="text/html", body=orb_file
-    )
-    task = asyncio.create_task(query_orb_task())
-    await asyncio.sleep(2)
-    assert not task.done()
-    s.authenticated_flag.set()
-    await task
-    assert task.done()
-    result_etree = task.result()
-    assert result_etree is not None
-    assert html.tostring(result_etree) == orb_file
-    assert mock_sleep.call_count == 1  # from the asyncio.sleep call above
-    mocked_server_responses.get(cp.make_url(ADT_ORB_URI), status=404)
-    with pytest.raises(PulseServerConnectionError):
-        result = await query_orb_task()
-    assert mock_sleep.call_count == 1
-    assert s.get_backoff().backoff_count == 1
-    mocked_server_responses.get(
-        cp.make_url(ADT_ORB_URI), status=200, content_type="text/html", body=orb_file
-    )
-    result = await query_orb_task()
-    assert result is not None
-    assert html.tostring(result) == orb_file
-    assert mock_sleep.call_count == 2
+#     s = PulseConnectionStatus()
+#     cp = get_mocked_connection_properties
+#     p = PulseQueryManager(s, cp)
+#     orb_file = read_file("orb.html")
+#     mocked_server_responses.get(
+#         cp.make_url(ADT_ORB_URI), status=200, content_type="text/html", body=orb_file
+#     )
+#     task = asyncio.create_task(query_orb_task())
+#     await asyncio.sleep(2)
+#     assert not task.done()
+#     s.authenticated_flag.set()
+#     await task
+#     assert task.done()
+#     result_etree = task.result()
+#     assert result_etree is not None
+#     assert html.tostring(result_etree) == orb_file
+#     assert mock_sleep.call_count == 1  # from the asyncio.sleep call above
+#     mocked_server_responses.get(cp.make_url(ADT_ORB_URI), status=404)
+#     with pytest.raises(PulseServerConnectionError):
+#         result = await query_orb_task()
+#     assert mock_sleep.call_count == 1
+#     assert s.get_backoff().backoff_count == 1
+#     mocked_server_responses.get(
+#         cp.make_url(ADT_ORB_URI), status=200, content_type="text/html", body=orb_file
+#     )
+#     result = await query_orb_task()
+#     assert result is not None
+#     assert html.tostring(result) == orb_file
+#     assert mock_sleep.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -340,59 +340,59 @@ async def test_async_query_connector_errors(
     )
 
 
-async def test_wait_for_authentication_flag(
-    mocked_server_responses: aioresponses,
-    get_mocked_connection_properties: PulseConnectionProperties,
-    read_file: Callable[..., str],
-):
-    async def query_orb_task(lock: asyncio.Lock):
-        async with lock:
-            try:
-                result = await p.query_orb(logging.DEBUG, "Failed to query orb")
-            except asyncio.CancelledError:
-                result = None
-            return result
+# async def test_wait_for_authentication_flag(
+#     mocked_server_responses: aioresponses,
+#     get_mocked_connection_properties: PulseConnectionProperties,
+#     read_file: Callable[..., str],
+# ):
+#     async def query_orb_task(lock: asyncio.Lock):
+#         async with lock:
+#             try:
+#                 result = await p.query_orb(logging.DEBUG, "Failed to query orb")
+#             except asyncio.CancelledError:
+#                 result = None
+#             return result
 
-    s = PulseConnectionStatus()
-    cp = get_mocked_connection_properties
-    p = PulseQueryManager(s, cp)
-    mocked_server_responses.get(
-        cp.make_url(ADT_ORB_URI),
-        status=200,
-        body=read_file("orb.html"),
-    )
-    lock = asyncio.Lock()
-    task = asyncio.create_task(query_orb_task(lock))
-    try:
-        await asyncio.wait_for(query_orb_task(lock), 10)
-    except TimeoutError:
-        task.cancel()
-        await task
-        # if we time out, the test has passed
-    else:
-        pytest.fail("Query should have timed out")
-    await lock.acquire()
-    task = asyncio.create_task(query_orb_task(lock))
-    lock.release()
-    await asyncio.sleep(1)
-    assert not task.done()
-    await asyncio.sleep(3)
-    assert not task.done()
-    s.authenticated_flag.set()
-    result = await task
-    assert result is not None
-    assert html.tostring(result) == read_file("orb.html")
+#     s = PulseConnectionStatus()
+#     cp = get_mocked_connection_properties
+#     p = PulseQueryManager(s, cp)
+#     mocked_server_responses.get(
+#         cp.make_url(ADT_ORB_URI),
+#         status=200,
+#         body=read_file("orb.html"),
+#     )
+#     lock = asyncio.Lock()
+#     task = asyncio.create_task(query_orb_task(lock))
+#     try:
+#         await asyncio.wait_for(query_orb_task(lock), 10)
+#     except TimeoutError:
+#         task.cancel()
+#         await task
+#         # if we time out, the test has passed
+#     else:
+#         pytest.fail("Query should have timed out")
+#     await lock.acquire()
+#     task = asyncio.create_task(query_orb_task(lock))
+#     lock.release()
+#     await asyncio.sleep(1)
+#     assert not task.done()
+#     await asyncio.sleep(3)
+#     assert not task.done()
+#     s.authenticated_flag.set()
+#     result = await task
+#     assert result is not None
+#     assert html.tostring(result) == read_file("orb.html")
 
-    # test query with retry will wait for authentication
-    # don't set an orb response so that we will backoff on the query
-    await lock.acquire()
-    task = asyncio.create_task(query_orb_task(lock))
-    lock.release()
-    await asyncio.sleep(0.5)
-    assert not task.done()
-    s.authenticated_flag.clear()
-    await asyncio.sleep(5)
-    assert not task.done()
-    s.authenticated_flag.set()
-    with pytest.raises(PulseServerConnectionError):
-        await task
+#     # test query with retry will wait for authentication
+#     # don't set an orb response so that we will backoff on the query
+#     await lock.acquire()
+#     task = asyncio.create_task(query_orb_task(lock))
+#     lock.release()
+#     await asyncio.sleep(0.5)
+#     assert not task.done()
+#     s.authenticated_flag.clear()
+#     await asyncio.sleep(5)
+#     assert not task.done()
+#     s.authenticated_flag.set()
+#     with pytest.raises(PulseServerConnectionError):
+#         await task

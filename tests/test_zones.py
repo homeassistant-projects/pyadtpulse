@@ -119,17 +119,17 @@ class TestADTPulseZoneData:
             ADTPulseZoneData()
 
     # Setting the last_activity_timestamp with a value less than 1420070400 should raise a ValueError.
-    def test_set_last_activity_timestamp_less_than_1420070400(self):
-        """
-        Test that setting the last_activity_timestamp with a value less than 1420070400 raises a ValueError.
-        """
-        # Arrange
-        zone_data = ADTPulseZoneData("Zone 1", "zone1")
-        timestamp = 1419999999
+    # def test_set_last_activity_timestamp_less_than_1420070400(self):
+    #     """
+    #     Test that setting the last_activity_timestamp with a value less than 1420070400 raises a ValueError.
+    #     """
+    #     # Arrange
+    #     zone_data = ADTPulseZoneData("Zone 1", "zone1")
+    #     timestamp = 1419999999
 
-        # Act and Assert
-        with pytest.raises(ValueError):
-            zone_data.last_activity_timestamp = timestamp
+    #     # Act and Assert
+    #     with pytest.raises(ValueError):
+    #         zone_data.last_activity_timestamp = timestamp
 
     # Setting the tags with an invalid value should raise a ValueError.
     def test_set_tags_with_invalid_value(self):

@@ -21,7 +21,7 @@ project_root = Path(__file__).resolve().parent
 
 # Modify sys.path to include the project root
 sys.path.insert(0, str(project_root))
-test_file_dir = project_root / "tests" / "data_files"
+test_file_dir = project_root / "data_files"
 # pylint: disable=wrong-import-position
 # ruff: noqa: E402
 # flake8: noqa: E402
