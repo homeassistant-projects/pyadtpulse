@@ -1,30 +1,14 @@
-name: Upload Release to PyPi
-
-on:
-  release:
-    types: [published]
-
-permissions:
-  contents: read
-
 jobs:
-  deploy:
+  pypi-publish:
+    name: Upload release to PyPI
     runs-on: ubuntu-latest
-
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pyadtpulse
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
-      - uses: actions/checkout@v4
+    # retrieve your distributions here
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: "latest"
-
-      - name: Build package
-        run: |
-          uv build
-
-      - name: Publish to PyPi
-        run: |
-          uv publish
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
