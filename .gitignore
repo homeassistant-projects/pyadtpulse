@@ -2,7 +2,7 @@
 *.pyc
 *.log
 *.egg-info
-
+.devcontainer
 dist
 build
 
