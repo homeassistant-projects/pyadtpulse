@@ -113,7 +113,7 @@ class PulseConnection(PulseQueryManager):
                     seconds *= 60
             return seconds
 
-        def determine_error_type():
+        def determine_error_type(tree: html.HtmlElement) -> None:
             """Determine what type of error we have from the url and the parsed page.
 
             Will raise the appropriate exception.
@@ -121,7 +121,10 @@ class PulseConnection(PulseQueryManager):
             self._login_in_progress = False
             url = self._connection_properties.make_url(ADT_LOGIN_URI)
             if response_url_string.startswith(url):
-                error = tree.find(".//div[@id='warnMsgContents']")
+                error = tree.find(
+                    path=".//div[@id='warnMsgContents']",
+                    namespaces=None,
+                )
                 if error is not None:
                     error_text = error.text_content()
                     LOG.error("Error logging into pulse: %s", error_text)
@@ -160,7 +163,7 @@ class PulseConnection(PulseQueryManager):
         url = self._connection_properties.make_url(ADT_SUMMARY_URI)
         response_url_string = str(response[2])
         if url != response_url_string:
-            determine_error_type()
+            determine_error_type(tree=tree)
             # if we get here we can't determine the error
             # raise a generic authentication error
             LOG.error(
