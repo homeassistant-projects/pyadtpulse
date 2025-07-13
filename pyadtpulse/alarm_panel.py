@@ -213,7 +213,10 @@ class ADTPulseAlarmPanel:
             if tree is None:
                 return False
 
-            arm_result = tree.find(".//div[@class='p_armDisarmWrapper']")
+            arm_result = tree.find(
+                path=".//div[@class='p_armDisarmWrapper']",
+                namespaces=None,
+            )
             if arm_result is not None:
                 error_block = arm_result.find(".//div")
                 if error_block is not None:
@@ -354,7 +357,10 @@ class ADTPulseAlarmPanel:
             None: This function does not return anything.
         """
         LOG.debug("Updating alarm status")
-        value = summary_html_etree.find(".//span[@class='p_boldNormalTextLarge']")
+        value = summary_html_etree.find(
+            path=".//span[@class='p_boldNormalTextLarge']",
+            namespaces=None,
+        )
         sat_location = "security_button_0"
         with self._state_lock:
             status_found = False
@@ -385,7 +391,10 @@ class ADTPulseAlarmPanel:
                 return
             LOG.debug("Alarm status = %s", self._status)
             sat_string = f'.//input[@id="{sat_location}"]'
-            sat_button = summary_html_etree.find(sat_string)
+            sat_button = summary_html_etree.find(
+                path=sat_string,
+                namespaces=None,
+            )
             if sat_button is not None and "onclick" in sat_button.attrib:
                 on_click = sat_button.attrib["onclick"]
                 match = re.search(r"sat=([a-z0-9\-]+)", on_click)

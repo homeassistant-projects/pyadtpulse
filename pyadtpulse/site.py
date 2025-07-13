@@ -131,7 +131,8 @@ class ADTPulseSite(ADTPulseSiteProperties):
         if device_response_etree is None:
             return None
         for dev_info_row in device_response_etree.findall(
-            ".//td[@class='InputFieldDescriptionL']"
+            path=".//td[@class='InputFieldDescriptionL']",
+            namespaces=None,
         ):
             identity_text = (
                 str(dev_info_row.text_content())
@@ -200,7 +201,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
                 zone_id = row_tds[2].text_content().strip()
                 zone_type: str = row_tds[4].text_content().strip()
                 zone_status = "Unknown"
-                zs_temp = row_tds[0].find("canvas")
+                zs_temp = row_tds[0].find(
+                    path="canvas",
+                    namespaces=None,
+                )
                 if (
                     zs_temp is not None
                     and zs_temp.get("title") is not None
@@ -252,7 +256,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
             if tree is None:
                 return False
         with self._site_lock:
-            for row in tree.findall(".//tr[@class='p_listRow'][@onclick]"):
+            for row in tree.findall(
+                path=".//tr[@class='p_listRow'][@onclick]",
+                namespaces=None,
+            ):
                 tmp_device_name = row.find(".//a")
                 if tmp_device_name is None:
                     LOG.debug("Skipping device as it has no name")
@@ -343,7 +350,8 @@ class ADTPulseSite(ADTPulseSiteProperties):
                 zone = int(
                     remove_prefix(
                         zone_row.find(
-                            ".//div[@class='p_grayNormalText']"
+                            path=".//div[@class='p_grayNormalText']",
+                            namespaces=None,
                         ).text_content(),
                         "Zone",
                     )
@@ -360,7 +368,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
             try:
                 last_update = parse_pulse_datetime(
                     remove_prefix(
-                        zone_row.find(".//span[@class='devStatIcon']").get("title"),
+                        zone_row.find(
+                            path=".//span[@class='devStatIcon']",
+                            namespaces=None,
+                        ).get("title"),
                         "Last Event:",
                     )
                 )
@@ -375,7 +386,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
         def get_zone_state(zone_row: html.HtmlElement, zone: int) -> str:
             try:
                 state = remove_prefix(
-                    zone_row.find(".//canvas[@class='p_ic_icon_device']").get("icon"),
+                    zone_row.find(
+                        path=".//canvas[@class='p_ic_icon_device']",
+                        namespaces=None,
+                    ).get("icon"),
                     "devStat",
                 )
             except (AttributeError, ValueError):
@@ -386,7 +400,12 @@ class ADTPulseSite(ADTPulseSiteProperties):
         def get_zone_status(zone_row: html.HtmlElement, zone: int) -> str:
             try:
                 status = (
-                    zone_row.find(".//td[@class='p_listRow']").getnext().text_content()
+                    zone_row.find(
+                        path=".//td[@class='p_listRow']",
+                        namespaces=None,
+                    )
+                    .getnext()
+                    .text_content()
                 )
                 status = status.replace("\xa0", "")
                 if status.startswith("Trouble"):
@@ -442,7 +461,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
         # parse ADT's convulated html to get sensor status
         with self._site_lock:
             try:
-                orb_status = tree.find(".//canvas[@id='ic_orb']").get("orb")
+                orb_status = tree.find(
+                    path=".//canvas[@id='ic_orb']",
+                    namespaces=None,
+                ).get("orb")
                 if orb_status == "offline":
                     self.gateway.is_online = False
                     raise PulseGatewayOfflineError(self.gateway.backoff)
@@ -458,7 +480,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
                 self._trouble_zones = set()
             original_non_default_zones = self._trouble_zones | self._tripped_zones
             # v26 and lower: temp = row.find("span", {"class": "p_grayNormalText"})
-            for row in tree.findall(".//tr[@class='p_listRow']"):
+            for row in tree.findall(
+                path=".//tr[@class='p_listRow']",
+                namespaces=None,
+            ):
                 zone_id = get_zone_id(row)
                 if not zone_id:
                     continue
