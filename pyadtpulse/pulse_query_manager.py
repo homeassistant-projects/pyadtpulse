@@ -15,6 +15,7 @@ from aiohttp import (
     ServerConnectionError,
     ServerDisconnectedError,
     ServerTimeoutError,
+    ClientTimeout,
 )
 from lxml import html
 from typeguard import typechecked
@@ -299,7 +300,7 @@ class PulseQueryManager:
                     headers=extra_headers,
                     params=extra_params if method == "GET" else None,
                     data=extra_params if method == "POST" else None,
-                    timeout=timeout,
+                    timeout=ClientTimeout(total=float(timeout)),
                 ) as response:
                     return_value = await self._handle_query_response(response)
                     if return_value[0] in RECOVERABLE_ERRORS:
@@ -396,7 +397,8 @@ class PulseQueryManager:
         signin_url = self._connection_properties.service_host
         try:
             async with self._connection_properties.session.get(
-                signin_url, timeout=10
+                signin_url,
+                timeout=ClientTimeout(total=float(10)),
             ) as response:
                 response_values = await self._handle_query_response(response)
                 response.raise_for_status()
