@@ -808,9 +808,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiohttp", specifier = ">=3.9.1" },
+    { name = "aiohttp", specifier = ">=3.12.14" },
     { name = "aiohttp-fast-zlib", extras = ["zlib-ng"], specifier = ">=0.3.0" },
-    { name = "lxml", specifier = ">=5.1.0" },
+    { name = "lxml", specifier = ">=6.0.0" },
     { name = "uvloop", specifier = ">=0.21.0" },
 ]
 
