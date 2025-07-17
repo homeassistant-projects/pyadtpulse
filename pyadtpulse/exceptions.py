@@ -28,13 +28,14 @@ class PulseExceptionWithBackoff(Exception):
 
     def __repr__(self):
         """Return a string representation of the exception."""
-        return f"{self.__class__.__name__}(message='{self.args[0]}', backoff={self.backoff})"
+        return f"{self.__class__.__name__}(message='{self.args[0]}', backoff={self.backoff})"  # noqa: E501
 
 
 class PulseExceptionWithRetry(PulseExceptionWithBackoff):
-    """Exception with backoff
+    """
+    Exception with backoff.
 
-    If retry_time is None, or is in the past, then just the backoff count will be incremented.
+    If retry_time is None or in the past, then the backoff count will be incremented.
     """
 
     def __init__(self, message: str, backoff: PulseBackoff, retry_time: float | None):
@@ -53,11 +54,11 @@ class PulseExceptionWithRetry(PulseExceptionWithBackoff):
 
     def __repr__(self):
         """Return a string representation of the exception."""
-        return f"{self.__class__.__name__}(message='{self.args[0]}', backoff={self.backoff}, retry_time={self.retry_time})"
+        return f"{self.__class__.__name__}(message='{self.args[0]}', backoff={self.backoff}, retry_time={self.retry_time})"  # noqa: E501
 
 
 class PulseConnectionError(Exception):
-    """Base class for connection errors"""
+    """Base class for connection errors."""
 
 
 class PulseServerConnectionError(PulseExceptionWithBackoff, PulseConnectionError):
@@ -79,7 +80,8 @@ class PulseClientConnectionError(PulseExceptionWithBackoff, PulseConnectionError
 class PulseServiceTemporarilyUnavailableError(
     PulseExceptionWithRetry, PulseConnectionError
 ):
-    """Service temporarily unavailable error.
+    """
+    Service temporarily unavailable error.
 
     For HTTP 503 and 429 errors.
     """
@@ -87,16 +89,18 @@ class PulseServiceTemporarilyUnavailableError(
     def __init__(self, backoff: PulseBackoff, retry_time: float | None = None):
         """Initialize Pusle service temporarily unavailable error exception."""
         super().__init__(
-            f"Pulse service temporarily unavailable until {compute_retry_time(retry_time)}",
-            backoff,
-            retry_time,
+            message=f"Pulse service temporarily unavailable until {compute_retry_time(retry_time)}",  # noqa: E501
+            backoff=backoff,
+            retry_time=retry_time,
         )
 
 
 class PulseLoginException(Exception):
-    """Login exceptions.
+    """
+    Login exceptions.
 
-    Base class for catching all login exceptions."""
+    Base class for catching all login exceptions.
+    """
 
 
 class PulseAuthenticationError(PulseLoginException):
@@ -134,7 +138,8 @@ class PulseMFARequiredError(PulseLoginException):
 
 
 class PulseNotLoggedInError(PulseLoginException):
-    """Exception to indicate that the application code is not logged in.
+    """
+    Exception to indicate that the application code is not logged in.
 
     Used for signalling waiters.
     """
