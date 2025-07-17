@@ -1,13 +1,11 @@
-"""Test Pulse Connection."""
+"""Test cases for PulseConnection class."""
 
 import asyncio
 import datetime
 
 import pytest
-from lxml import html
 
-from tests.conftest import LoginType, add_custom_response, add_signin
-from pyadtpulse.const import ADT_LOGIN_URI, DEFAULT_API_HOST
+from pyadtpulse.const import DEFAULT_API_HOST
 from pyadtpulse.exceptions import (
     PulseAccountLockedError,
     PulseAuthenticationError,
@@ -18,17 +16,23 @@ from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProper
 from pyadtpulse.pulse_connection import PulseConnection
 from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
 from pyadtpulse.pulse_connection_status import PulseConnectionStatus
-from pyadtpulse.pulse_query_manager import MAX_REQUERY_RETRIES
+from tests.conftest import LoginType, add_signin
 
 
 def setup_pulse_connection() -> PulseConnection:
+    """
+    Create a PulseConnection instance for testing.
+
+    Returns:
+        PulseConnection: A configured PulseConnection instance with test credentials.
+
+    """
     s = PulseConnectionStatus()
     pcp = PulseConnectionProperties(DEFAULT_API_HOST)
     pa = PulseAuthenticationProperties(
         "test@example.com", "testpassword", "testfingerprint"
     )
-    pc = PulseConnection(s, pcp, pa)
-    return pc
+    return PulseConnection(s, pcp, pa)
 
 
 # @pytest.mark.asyncio
@@ -56,6 +60,18 @@ def setup_pulse_connection() -> PulseConnection:
 
 @pytest.mark.asyncio
 async def test_login_failure_server_down(mock_server_down):
+    """
+    Test login behavior when the server is unreachable.
+
+    Args:
+        mock_server_down: Fixture that simulates a server being unreachable.
+
+    Verifies that:
+        - Appropriate exception is raised when server is down
+        - Login state is properly reset after failure
+        - No backoff is applied for connection failures
+
+    """
     pc = setup_pulse_connection()
     with pytest.raises(PulseServerConnectionError):
         await pc.async_do_login_query()
@@ -124,6 +140,23 @@ async def test_login_failure_server_down(mock_server_down):
 async def test_account_lockout(
     mocked_server_responses, mock_sleep, get_mocked_url, read_file, freeze_time_to_now
 ):
+    """
+    Test account lockout behavior and recovery.
+
+    Args:
+        mocked_server_responses: Fixture for mocked server responses
+        mock_sleep: Fixture for mocking sleep calls
+        get_mocked_url: Fixture for getting mocked URLs
+        read_file: Fixture for reading test data files
+        freeze_time_to_now: Fixture for controlling time during tests
+
+    Verifies that:
+        - Account lockout is properly detected and handled
+        - Lockout expiration works correctly
+        - Connection status is properly maintained during lockout
+        - No backoff is applied during account lockouts
+
+    """
     pc = setup_pulse_connection()
     add_signin(LoginType.SUCCESS, mocked_server_responses, get_mocked_url, read_file)
     await pc.async_do_login_query()
@@ -159,6 +192,21 @@ async def test_account_lockout(
 async def test_invalid_credentials(
     mocked_server_responses, mock_sleep, get_mocked_url, read_file
 ):
+    """
+    Test behavior when invalid credentials are provided.
+
+    Args:
+        mocked_server_responses: Fixture for mocked server responses
+        mock_sleep: Fixture for mocking sleep calls
+        get_mocked_url: Fixture for getting mocked URLs
+        read_file: Fixture for reading test data files
+
+    Verifies that:
+        - Authentication failures are properly detected
+        - Appropriate exceptions are raised
+        - No backoff is applied for auth failures
+
+    """
     pc = setup_pulse_connection()
     add_signin(LoginType.SUCCESS, mocked_server_responses, get_mocked_url, read_file)
     await pc.async_do_login_query()
@@ -183,6 +231,20 @@ async def test_invalid_credentials(
 
 @pytest.mark.asyncio
 async def test_mfa_failure(mocked_server_responses, get_mocked_url, read_file):
+    """
+    Test behavior when MFA is required but not provided.
+
+    Args:
+        mocked_server_responses: Fixture for mocked server responses
+        get_mocked_url: Fixture for getting mocked URLs
+        read_file: Fixture for reading test data files
+
+    Verifies that:
+        - MFA requirement is properly detected
+        - Appropriate exceptions are raised
+        - No backoff is applied for MFA requirements
+
+    """
     pc = setup_pulse_connection()
     add_signin(LoginType.SUCCESS, mocked_server_responses, get_mocked_url, read_file)
     await pc.async_do_login_query()
@@ -203,13 +265,28 @@ async def test_mfa_failure(mocked_server_responses, get_mocked_url, read_file):
 
 @pytest.mark.asyncio
 async def test_only_single_login(mocked_server_responses, get_mocked_url, read_file):
+    """
+    Test that only one login attempt can be in progress at a time.
+
+    Args:
+        mocked_server_responses: Fixture for mocked server responses
+        get_mocked_url: Fixture for getting mocked URLs
+        read_file: Fixture for reading test data files
+
+    Verifies that:
+        - Concurrent login attempts are properly handled
+        - Only one login process executes at a time
+        - Connection status is properly maintained during concurrent attempts
+
+    """
+
     async def login_task():
         await pc.async_do_login_query()
 
     pc = setup_pulse_connection()
     add_signin(LoginType.SUCCESS, mocked_server_responses, get_mocked_url, read_file)
     # delay one task for a little bit
-    for i in range(4):
+    for _i in range(4):
         pc._login_backoff.increment_backoff()
     task1 = asyncio.create_task(login_task())
     task2 = asyncio.create_task(login_task())

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """Sample client for using pyadtpulse."""
 
-import logging
 import argparse
 import asyncio
 import json
+import logging
 import sys
 from pprint import pprint
 from time import sleep, time
@@ -82,10 +82,12 @@ def setup_logger(level: int):
 
 
 def handle_args() -> argparse.Namespace:
-    """Handle program arguments using argparse.
+    """
+    Handle program arguments using argparse.
 
     Returns:
         argparse.Namespace: Parsed command-line arguments.
+
     """
     parser = argparse.ArgumentParser(description="ADT Pulse example client")
     parser.add_argument("json_file", nargs="?", help="JSON file containing parameters")
@@ -217,7 +219,8 @@ def handle_args() -> argparse.Namespace:
 
 
 def load_parameters_from_json(json_file: str) -> dict | None:
-    """Load parameters from a JSON file.
+    """
+    Load parameters from a JSON file.
 
     Args:
         json_file (str): Path to the JSON file.
@@ -225,6 +228,7 @@ def load_parameters_from_json(json_file: str) -> dict | None:
     Returns:
         Optional[Dict]: Loaded parameters as a dictionary,
                         or None if there was an error.
+
     """
     try:
         with open(json_file, encoding="utf-8") as file:
@@ -268,10 +272,12 @@ def load_parameters_from_json(json_file: str) -> dict | None:
 
 
 def print_site(site: ADTPulseSite) -> None:
-    """Print site information.
+    """
+    Print site information.
 
     Args:
         site (ADTPulseSite): The site to display
+
     """
     print(f"Site: {site.name} (id={site.id})")
     print("Alarm panel: ")
@@ -281,7 +287,8 @@ def print_site(site: ADTPulseSite) -> None:
 
 
 def check_updates(site: ADTPulseSite, adt: PyADTPulse, run_alarm_test: bool) -> bool:
-    """Check a site for updates and print details.
+    """
+    Check a site for updates and print details.
 
     We don't really need to do this anymore, as the data will be
     updated in the background
@@ -292,6 +299,7 @@ def check_updates(site: ADTPulseSite, adt: PyADTPulse, run_alarm_test: bool) -> 
         test_alarm: bool: sleep a bit if testing alarm
 
         Returns: bool: True if update successful
+
     """
     if run_alarm_test:
         while (
@@ -311,12 +319,14 @@ def check_updates(site: ADTPulseSite, adt: PyADTPulse, run_alarm_test: bool) -> 
 
 
 def test_alarm(site: ADTPulseSite, adt: PyADTPulse) -> None:
-    """Test alarm functions.
+    """
+    Test alarm functions.
 
     Args:
         site (ADTPulseSite): site to test
         adt (PyADTPulse): ADT Pulse connection objecct
         sleep_interval (int): length to sleep between tests
+
     """
     print("Arming alarm stay")
     if site.arm_home():
@@ -382,7 +392,8 @@ def sync_example(
     relogin_interval: int,
     detailed_debug_logging: bool,
 ) -> None:
-    """Run example of sync pyadtpulse calls.
+    """
+    Run example of sync pyadtpulse calls.
 
     Args:
         username (str): Pulse username
@@ -394,6 +405,7 @@ def sync_example(
         keepalive_interval (int): keepalive interval in minutes
         relogin_interval (int): relogin interval in minutes
         detailed_debug_logging (bool): True to enable detailed debug logging
+
     """
     while True:
         try:
@@ -497,11 +509,13 @@ def sync_example(
 
 
 async def async_test_alarm(adt: PyADTPulse) -> None:
-    """Test alarm functions.
+    """
+    Test alarm functions.
 
     Args:
         site (ADTPulseSite): site to test
         adt (PyADTPulse): ADT Pulse connection objecct
+
     """
     print("Arming alarm stay")
     if await adt.site.async_arm_home():
@@ -619,7 +633,8 @@ async def async_example(
     relogin_interval: int,
     detailed_debug_logging: bool,
 ) -> None:
-    """Run example of pytadtpulse async usage.
+    """
+    Run example of pytadtpulse async usage.
 
     Args:
         username (str): Pulse username
@@ -631,6 +646,7 @@ async def async_example(
         keepalive_interval (int): keepalive interval in minutes
         relogin_interval (int): relogin interval in minutes
         detailed_debug_logging (bool): enable detailed debug logging
+
     """
     adt = PyADTPulseAsync(
         username,

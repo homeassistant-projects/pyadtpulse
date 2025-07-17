@@ -21,9 +21,11 @@ class PulseAuthenticationProperties:
 
     @staticmethod
     def check_username(username: str) -> None:
-        """Check if username is valid.
+        """
+        Check if username is valid.
 
-        Raises ValueError if a login parameter is not valid."""
+        Raises ValueError if a login parameter is not valid.
+        """
         if not username:
             raise ValueError("Username is mandatory")
         pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
@@ -33,7 +35,8 @@ class PulseAuthenticationProperties:
     @staticmethod
     @typechecked
     def check_password(password: str) -> None:
-        """Check if password is valid.
+        """
+        Check if password is valid.
 
         Raises ValueError if password is not valid.
         """
@@ -43,7 +46,8 @@ class PulseAuthenticationProperties:
     @staticmethod
     @typechecked
     def check_fingerprint(fingerprint: str) -> None:
-        """Check if fingerprint is valid.
+        """
+        Check if fingerprint is valid.
 
         Raises ValueError if password is not valid.
         """

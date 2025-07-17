@@ -34,12 +34,14 @@ class ADTPulseSite(ADTPulseSiteProperties):
 
     @typechecked
     def __init__(self, pulse_connection: PulseConnection, site_id: str, name: str):
-        """Initialize.
+        """
+        Initialize.
 
         Args:
             pulse_connection (PulseConnection): Pulse connection.
             site_id (str): Site ID.
             name (str): Site name.
+
         """
         self._pulse_connection = pulse_connection
         super().__init__(site_id, name, pulse_connection.debug_locks)
@@ -102,7 +104,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
 
     async def _get_device_attributes(self, device_id: str) -> dict[str, str] | None:
         """
-        Retrieves the attributes of a device.
+        Retrieve the attributes of a device.
 
         Args:
             device_id (str): The ID of the device to retrieve attributes for.
@@ -111,6 +113,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
             Optional[dict[str, str]]: A dictionary of attribute names and their
                 corresponding values,
                 or None if the device response lxml tree is None.
+
         """
         result: dict[str, str] = {}
         if device_id == ADT_GATEWAY_STRING:
@@ -153,10 +156,11 @@ class ADTPulseSite(ADTPulseSiteProperties):
     @typechecked
     async def set_device(self, device_id: str) -> None:
         """
-        Sets the device attributes for the given device ID.
+        Set the device attributes for the given device ID.
 
         Args:
             device_id (str): The ID of the device.
+
         """
         dev_attr = await self._get_device_attributes(device_id)
         if dev_attr is None:
@@ -175,28 +179,29 @@ class ADTPulseSite(ADTPulseSiteProperties):
     @typechecked
     async def fetch_devices(self, tree: html.HtmlElement | None) -> bool:
         """
-        Fetches the devices from the given lxml etree and updates
-        the zone attributes.
+        Fetch the devices from the tree and update the zone attributes.
 
         Args:
-            tree (Optional[html.HtmlElement]): The lxml etree containing
+            tree: (Optional[html.HtmlElement]): The lxml etree containing
                 the devices.
 
         Returns:
             bool: True if the devices were fetched and zone attributes were updated
                 successfully, False otherwise.
+
         """
         regex_device = r"goToUrl\('device.jsp\?id=(\d*)'\);"
         task_list: list[Task] = []
         zone_id: str | None = None
 
         def add_zone_from_row(row_tds: list[html.HtmlElement]) -> str | None:
-            """Adds a zone from an HtmlElement row.
+            """
+            Add a zone from an HtmlElement row.
 
             Returns None if successful, otherwise the zone ID if present.
             """
             zone_id: str | None = None
-            if row_tds and len(row_tds) > 4:
+            if row_tds and len(row_tds) > 4:  # noqa: PLR2004
                 zone_name: str = row_tds[1].text_content().strip()
                 zone_id = row_tds[2].text_content().strip()
                 zone_type: str = row_tds[4].text_content().strip()
@@ -297,7 +302,8 @@ class ADTPulseSite(ADTPulseSiteProperties):
     async def _async_update_zones_as_dict(
         self, tree: html.HtmlElement | None
     ) -> ADTPulseZones | None:
-        """Update zone status information asynchronously.
+        """
+        Update zone status information asynchronously.
 
         Returns:
             ADTPulseZones: a dictionary of zones with status
@@ -305,6 +311,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
 
         Raises:
             PulseGatewayOffline: If the gateway is offline.
+
         """
         with self._site_lock:
             if self._zones is None:
@@ -331,9 +338,9 @@ class ADTPulseSite(ADTPulseSiteProperties):
             self.update_zone_from_etree(tree)
         return self._zones
 
-    def update_zone_from_etree(self, tree: html.HtmlElement) -> set[int]:
+    def update_zone_from_etree(self, tree: html.HtmlElement) -> set[int]:  # noqa: PLR0912, PLR0915
         """
-        Updates the zone information based on the provided lxml etree.
+        Update the zone information based on the provided lxml etree.
 
         Args:
             tree:html.HtmlElement: the parsed response tree
@@ -343,6 +350,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
 
         Raises:
             PulseGatewayOffline: If the gateway is offline.
+
         """
 
         def get_zone_id(zone_row: html.HtmlElement) -> int | None:
@@ -503,7 +511,8 @@ class ADTPulseSite(ADTPulseSiteProperties):
                         self._trouble_zones.remove(zone_id)
                     update_zone_from_row(zone_id, state, status, last_update)
                     continue
-                # everything here is OK, so we just need to check if anything in tripped or trouble states have
+                # everything here is OK, so we just need to check if
+                #   anything in tripped or trouble states have
                 # returned to normal
                 if first_pass:
                     update_zone_from_row(zone_id, state, status, last_update)
@@ -524,12 +533,14 @@ class ADTPulseSite(ADTPulseSiteProperties):
         return retval
 
     async def _async_update_zones(self) -> list[ADTPulseFlattendZone] | None:
-        """Update zones asynchronously.
+        """
+        Update zones asynchronously.
 
         Returns:
             List[ADTPulseFlattendZone]: a list of zones with their status
 
             None on error
+
         """
         with self._site_lock:
             if not self._zones:
@@ -540,10 +551,12 @@ class ADTPulseSite(ADTPulseSiteProperties):
             return zonelist.flatten()
 
     def update_zones(self) -> list[ADTPulseFlattendZone] | None:
-        """Update zone status information.
+        """
+        Update zone status information.
 
         Returns:
             Optional[List[ADTPulseFlattendZone]]: a list of zones with status
+
         """
         coro = self._async_update_zones()
         return run_coroutine_threadsafe(coro, get_event_loop()).result()

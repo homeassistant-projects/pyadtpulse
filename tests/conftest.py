@@ -56,10 +56,12 @@ class LoginType(Enum):
 
 @pytest.fixture
 def read_file():
-    """Fixture to read a file.
+    """
+    Fixture to read a file.
 
     Args:
         file_name (str): Name of the file to read
+
     """
 
     def _read_file(file_name: str) -> str:
@@ -149,6 +151,8 @@ def get_mocked_url(get_mocked_connection_properties):
 
 @pytest.fixture
 def get_relative_mocked_url(get_mocked_connection_properties):
+    """Fixture to get the test relative url."""
+
     def _get_relative_mocked_url(path: str) -> str:
         return remove_prefix(
             get_mocked_connection_properties.make_url(path), DEFAULT_API_HOST
@@ -243,7 +247,7 @@ def mocked_server_responses(
         yield responses
 
 
-def add_custom_response(
+def add_custom_response(  # noqa: PLR0913
     mocked_server_responses,
     read_file,
     url: str,
@@ -252,6 +256,7 @@ def add_custom_response(
     file_name: str | None = None,
     headers: dict[str, Any] | None = None,
 ):
+    """Add a custom response to the mocked server."""
     if method.upper() not in ("GET", "POST"):
         raise ValueError("Unsupported HTTP method. Only GET and POST are supported.")
 
@@ -268,6 +273,7 @@ def add_custom_response(
 def add_signin(
     signin_type: LoginType, mocked_server_responses, get_mocked_url, read_file
 ):
+    """Add a signin response to the mocked server."""
     if signin_type != LoginType.SUCCESS:
         add_custom_response(
             mocked_server_responses,
@@ -291,6 +297,7 @@ def add_signin(
 
 
 def add_logout(mocked_server_responses, get_mocked_url, read_file):
+    """Add a logout response to the mocked server."""
     add_custom_response(
         mocked_server_responses,
         read_file,
@@ -336,8 +343,8 @@ class PulseMockedWebServer:
     def _make_local_prefix(self, uri: str) -> str:
         return remove_prefix(self.pcp.make_url(uri), "https://")
 
-    async def handler(self, request: web.Request) -> web.Response | web.FileResponse:
-        """Handler for the PulseMockedWebServer."""
+    async def handler(self, request: web.Request) -> web.Response | web.FileResponse:  # noqa: PLR0911
+        """Define a handler for the PulseMockedWebServer."""
         path = request.path
 
         # Check if there is a query parameter for retry_after
@@ -359,7 +366,7 @@ class PulseMockedWebServer:
 
         # Simulate service unavailable for a specific path
         def handle_service_unavailable(path: str) -> web.Response | None:
-            if path == "/service_unavailable" or self.status_code == 503:
+            if path == "/service_unavailable" or self.status_code == 503:  # noqa: PLR2004
                 retry_after = retry_after_param[0] if retry_after_param else None
                 self.retry_after_header = str(parse_retry_after(retry_after))
                 self.status_code = 503
@@ -376,7 +383,7 @@ class PulseMockedWebServer:
 
         def handle_rate_limit_exceeded(path: str) -> web.Response | None:
             # Simulate rate limit exceeded for a specific path
-            if path == "/rate_limit_exceeded" or self.status_code == 429:
+            if path == "/rate_limit_exceeded" or self.status_code == 429:  # noqa: PLR2004
                 retry_after = retry_after_param[0] if retry_after_param else None
                 self.retry_after_header = str(parse_retry_after(retry_after))
                 self.status_code = 429

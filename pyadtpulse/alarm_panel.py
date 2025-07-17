@@ -58,20 +58,24 @@ class ADTPulseAlarmPanel:
 
     @property
     def status(self) -> str:
-        """Get alarm status.
+        """
+        Get alarm status.
 
         Returns:
             str: the alarm status
+
         """
         with self._state_lock:
             return self._status
 
     @status.setter
     def status(self, new_status: str) -> None:
-        """Set alarm status.
+        """
+        Set alarm status.
 
         Args:
             new_status (str): the new alarm status
+
         """
         with self._state_lock:
             if new_status not in ALARM_STATUSES:
@@ -80,80 +84,96 @@ class ADTPulseAlarmPanel:
 
     @property
     def is_away(self) -> bool:
-        """Return wheter the system is armed away.
+        """
+        Return wheter the system is armed away.
 
         Returns:
             bool: True if armed away
+
         """
         with self._state_lock:
             return self._status == ADT_ALARM_AWAY
 
     @property
     def is_home(self) -> bool:
-        """Return whether system is armed at home/stay.
+        """
+        Return whether system is armed at home/stay.
 
         Returns:
             bool: True if system is armed home/stay
+
         """
         with self._state_lock:
             return self._status == ADT_ALARM_HOME
 
     @property
     def is_disarmed(self) -> bool:
-        """Return whether the system is disarmed.
+        """
+        Return whether the system is disarmed.
 
         Returns:
             bool: True if the system is disarmed
+
         """
         with self._state_lock:
             return self._status == ADT_ALARM_OFF
 
     @property
     def is_force_armed(self) -> bool:
-        """Return whether the system is armed in bypass mode.
+        """
+        Return whether the system is armed in bypass mode.
 
         Returns:
             bool: True if system armed in bypass mode
+
         """
         with self._state_lock:
             return self._is_force_armed
 
     @property
     def is_arming(self) -> bool:
-        """Return if system is attempting to arm.
+        """
+        Return if system is attempting to arm.
 
         Returns:
             bool: True if system is attempting to arm
+
         """
         with self._state_lock:
             return self._status == ADT_ALARM_ARMING
 
     @property
     def is_disarming(self) -> bool:
-        """Return if system is attempting to disarm.
+        """
+        Return if system is attempting to disarm.
 
         Returns:
             bool: True if system is attempting to disarm
+
         """
         with self._state_lock:
             return self._status == ADT_ALARM_DISARMING
 
     @property
     def is_armed_night(self) -> bool:
-        """Return if system is in night mode.
+        """
+        Return if system is in night mode.
 
         Returns:
             bool: True if system is in night mode
+
         """
         with self._state_lock:
             return self._status == ADT_ALARM_NIGHT
 
     @property
     def last_update(self) -> float:
-        """Return last update time.
+        """
+        Return last update time.
 
         Returns:
             float: last arm/disarm time
+
         """
         with self._state_lock:
             return self._last_arm_disarm
@@ -162,14 +182,17 @@ class ADTPulseAlarmPanel:
     async def _arm(
         self, connection: PulseConnection, mode: str, force_arm: bool
     ) -> bool:
-        """Set arm status.
+        """
+        Set arm status.
 
         Args:
-            mode (str)
+            connection (PulseConnection): the connection to use
+            mode (str): the mode to set the alarm to
             force_arm (bool): True if arm force
 
         Returns:
             bool: True if operation successful
+
         """
         LOG.debug("Setting ADT alarm %s to %s, force = %s", self._sat, mode, force_arm)
         with self._state_lock:
@@ -179,7 +202,7 @@ class ADTPulseAlarmPanel:
                     mode,
                     self._status,
                 )
-            if self._status != ADT_ALARM_OFF and mode != ADT_ALARM_OFF:
+            if ADT_ALARM_OFF not in (self._status, mode):
                 LOG.warning("Cannot set alarm status from %s to %s", self._status, mode)
                 return False
             params = {
@@ -252,46 +275,57 @@ class ADTPulseAlarmPanel:
 
     @typechecked
     def arm_away(self, connection: PulseConnection, force_arm: bool = False) -> bool:
-        """Arm the alarm in Away mode.
+        """
+        Arm the alarm in Away mode.
 
         Args:
+            connection (PulseConnection): the connection to use
             force_arm (bool, Optional): force system to arm
 
         Returns:
             bool: True if arm succeeded
+
         """
         return self._sync_set_alarm_mode(connection, ADT_ALARM_AWAY, force_arm)
 
     @typechecked
     def arm_night(self, connection: PulseConnection, force_arm: bool = False) -> bool:
-        """Arm the alarm in Night mode.
+        """
+        Arm the alarm in Night mode.
 
         Args:
+            connection (PulseConnection): the connection to use
             force_arm (bool, Optional): force system to arm
 
         Returns:
             bool: True if arm succeeded
+
         """
         return self._sync_set_alarm_mode(connection, ADT_ALARM_NIGHT, force_arm)
 
     @typechecked
     def arm_home(self, connection: PulseConnection, force_arm: bool = False) -> bool:
-        """Arm the alarm in Home mode.
+        """
+        Arm the alarm in Home mode.
 
         Args:
+            connection (PulseConnection): the connection to use
             force_arm (bool, Optional): force system to arm
 
         Returns:
             bool: True if arm succeeded
+
         """
         return self._sync_set_alarm_mode(connection, ADT_ALARM_HOME, force_arm)
 
     @typechecked
     def disarm(self, connection: PulseConnection) -> bool:
-        """Disarm the alarm.
+        """
+        Disarm the alarm.
 
         Returns:
             bool: True if disarm succeeded
+
         """
         return self._sync_set_alarm_mode(connection, ADT_ALARM_OFF, False)
 
@@ -299,13 +333,16 @@ class ADTPulseAlarmPanel:
     async def async_arm_away(
         self, connection: PulseConnection, force_arm: bool = False
     ) -> bool:
-        """Arm alarm away async.
+        """
+        Arm alarm away async.
 
         Args:
+            connection (PulseConnection): the connection to use
             force_arm (bool, Optional): force system to arm
 
         Returns:
             bool: True if arm succeeded
+
         """
         return await self._arm(connection, ADT_ALARM_AWAY, force_arm)
 
@@ -313,12 +350,15 @@ class ADTPulseAlarmPanel:
     async def async_arm_home(
         self, connection: PulseConnection, force_arm: bool = False
     ) -> bool:
-        """Arm alarm home async.
+        """
+        Arm alarm home async.
 
         Args:
+            connection (PulseConnection): the connection to use
             force_arm (bool, Optional): force system to arm
         Returns:
             bool: True if arm succeeded
+
         """
         return await self._arm(connection, ADT_ALARM_HOME, force_arm)
 
@@ -326,35 +366,40 @@ class ADTPulseAlarmPanel:
     async def async_arm_night(
         self, connection: PulseConnection, force_arm: bool = False
     ) -> bool:
-        """Arm alarm night async.
+        """
+        Arm alarm night async.
 
         Args:
+            connection (PulseConnection): the connection to use
             force_arm (bool, Optional): force system to arm
         Returns:
             bool: True if arm succeeded
+
         """
         return await self._arm(connection, ADT_ALARM_NIGHT, force_arm)
 
     @typechecked
     async def async_disarm(self, connection: PulseConnection) -> bool:
-        """Disarm alarm async.
+        """
+        Disarm alarm async.
 
         Returns:
             bool: True if disarm succeeded
+
         """
         return await self._arm(connection, ADT_ALARM_OFF, False)
 
     @typechecked
     def update_alarm_from_etree(self, summary_html_etree: html.HtmlElement) -> None:
         """
-        Updates the alarm status based on the information extracted from the provided
-        lxml etree
+        Update the alarm status extracted from the provided lxml etree.
 
         Args:
             summary_html_etree: html.HtmlElement: the parsed response tree.
 
         Returns:
             None: This function does not return anything.
+
         """
         LOG.debug("Updating alarm status")
         value = summary_html_etree.find(
@@ -416,6 +461,7 @@ class ADTPulseAlarmPanel:
 
         Returns:
             None
+
         """
         self.model = alarm_attributes.get("type_model", "Unknown")
         self.manufacturer = alarm_attributes.get("manufacturer_provider", "ADT")

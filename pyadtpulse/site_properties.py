@@ -26,6 +26,7 @@ class ADTPulseSiteProperties:
 
     @typechecked
     def __init__(self, site_id: str, name: str, debug_locks: bool = False):
+        """Init for ADTPulseSiteProperties."""
         self._id = site_id
         self._name = name
         self._last_updated: int = 0
@@ -37,19 +38,23 @@ class ADTPulseSiteProperties:
 
     @property
     def id(self) -> str:
-        """Get site id.
+        """
+        Get site id.
 
         Returns:
             str: the site id
+
         """
         return self._id
 
     @property
     def name(self) -> str:
-        """Get site name.
+        """
+        Get site name.
 
         Returns:
             str: the site name
+
         """
         return self._name
 
@@ -58,28 +63,33 @@ class ADTPulseSiteProperties:
 
     @property
     def last_updated(self) -> int:
-        """Return time site last updated.
+        """
+        Return time site last updated.
 
         Returns:
             int: the time site last updated as datetime
+
         """
         with self._site_lock:
             return self._last_updated
 
     @property
     def site_lock(self) -> "RLock| DebugRLock":
-        """Get thread lock for site data.
+        """
+        Get thread lock for site data.
 
         Not needed for async
 
         Returns:
             RLock: thread RLock
+
         """
         return self._site_lock
 
     @property
     def zones(self) -> list[ADTPulseFlattendZone] | None:
-        """Return all zones registered with the ADT Pulse account.
+        """
+        Return all zones registered with the ADT Pulse account.
 
         (cached copy of last fetch)
         See Also fetch_zones()
@@ -91,10 +101,12 @@ class ADTPulseSiteProperties:
 
     @property
     def zones_as_dict(self) -> ADTPulseZones | None:
-        """Return zone information in dictionary form.
+        """
+        Return zone information in dictionary form.
 
         Returns:
             ADTPulseZones: all zone information
+
         """
         with self._site_lock:
             if not self._zones:
@@ -103,25 +115,30 @@ class ADTPulseSiteProperties:
 
     @property
     def alarm_control_panel(self) -> ADTPulseAlarmPanel:
-        """Return the alarm panel object for the site.
+        """
+        Return the alarm panel object for the site.
 
         Returns:
             Optional[ADTPulseAlarmPanel]: the alarm panel object
+
         """
         return self._alarm_panel
 
     @property
     def gateway(self) -> ADTPulseGateway:
-        """Get gateway device object.
+        """
+        Get gateway device object.
 
         Returns:
             ADTPulseGateway: Gateway device
+
         """
         return self._gateway
 
     @property
     def updates_may_exist(self) -> bool:
-        """Query whether updated sensor data exists.
+        """
+        Query whether updated sensor data exists.
 
         Deprecated, use method on pyADTPulse object instead
         """
@@ -138,7 +155,8 @@ class ADTPulseSiteProperties:
         return False
 
     async def async_update(self) -> bool:
-        """Force update site/zone data async with current data.
+        """
+        Force update site/zone data async with current data.
 
         Deprecated, use method on pyADTPulse object instead
         """
@@ -151,7 +169,8 @@ class ADTPulseSiteProperties:
         return False
 
     def update(self) -> bool:
-        """Force update site/zones with current data.
+        """
+        Force update site/zones with current data.
 
         Deprecated, use method on pyADTPulse object instead
         """

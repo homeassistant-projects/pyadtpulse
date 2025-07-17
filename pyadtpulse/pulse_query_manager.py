@@ -1,9 +1,9 @@
 """Pulse Query Manager."""
 
-from logging import getLogger
 from asyncio import wait_for
 from datetime import datetime
 from http import HTTPStatus
+from logging import getLogger
 from time import time
 
 from aiohttp import (
@@ -12,10 +12,10 @@ from aiohttp import (
     ClientError,
     ClientResponse,
     ClientResponseError,
+    ClientTimeout,
     ServerConnectionError,
     ServerDisconnectedError,
     ServerTimeoutError,
-    ClientTimeout,
 )
 from lxml import html
 from typeguard import typechecked
@@ -101,9 +101,10 @@ class PulseQueryManager:
     def _handle_http_errors(
         self, return_value: tuple[int, str | None, URL | None, str | None]
     ) -> None:
-        """Handle HTTP errors.
+        """
+        Handle HTTP errors.
 
-        Parameters:
+        Args:
             return_value (tuple[int, str | None, URL | None, str | None]):
                 The return value from _handle_query_response.
 
@@ -111,18 +112,20 @@ class PulseQueryManager:
             PulseServerConnectionError: If the server returns an error code.
             PulseServiceTemporarilyUnavailableError: If the server returns a
                 HTTP status code of 429 or 503.
+
         """
 
         def get_retry_after(retry_after: str) -> int | None:
             """
             Parse the value of the "Retry-After" header.
 
-            Parameters:
+            Args:
                 retry_after (str): The value of the "Retry-After" header
 
             Returns:
                 int | None: The timestamp in seconds to wait before retrying,
                     or None if the header is invalid.
+
             """
             if retry_after.isnumeric():
                 retval = int(retry_after) + int(time())
@@ -149,7 +152,7 @@ class PulseQueryManager:
                 retry,
             )
         raise PulseServerConnectionError(
-            f"HTTP error {return_value[0]}: {return_value[1]} connecting to {return_value[2]}",
+            f"HTTP error {return_value[0]}: {return_value[1]} connecting to {return_value[2]}",  # noqa: E501
             self._connection_status.get_backoff(),
         )
 
@@ -181,7 +184,7 @@ class PulseQueryManager:
         raise PulseClientConnectionError(str(e), self._connection_status.get_backoff())
 
     @typechecked
-    async def async_query(
+    async def async_query(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         uri: str,
         method: str = "GET",
@@ -214,9 +217,10 @@ class PulseQueryManager:
         Raises:
             PulseClientConnectionError: If the client cannot connect
             PulseServerConnectionError: If there is a server error
-            PulseServiceTemporarilyUnavailableError: If the server returns an HTTP status code of 429 or 503
+            PulseServiceTemporarilyUnavailableError: If the response code is 429 or 503
             PulseNotLoggedInError: if not logged in and task is waiting for longer than
                 ADT_DEFAULT_LOGIN_TIMEOUT seconds
+
         """
 
         async def setup_query():
@@ -289,7 +293,7 @@ class PulseQueryManager:
                         )
                     except TimeoutError as ex:
                         LOG.warning(
-                            "%s for %s timed out waiting for authenticated flag to be set",
+                            "%s for %s timed out waiting for authenticated flag to be set",  # noqa: E501
                             method,
                             uri,
                         )
@@ -358,7 +362,8 @@ class PulseQueryManager:
     async def query_orb(
         self, level: int, error_message: str
     ) -> html.HtmlElement | None:
-        """Query ADT Pulse ORB.
+        """
+        Query ADT Pulse ORB.
 
         Args:
             level (int): error level to log on failure
@@ -370,7 +375,9 @@ class PulseQueryManager:
         Raises:
             PulseClientConnectionError: If the client cannot connect
             PulseServerConnectionError: If there is a server error
-            PulseServiceTemporarilyUnavailableError: If the server returns a Retry-After header
+            PulseServiceTemporarilyUnavailableError: If the server returns a
+                Retry-After header
+
         """
         code, response, url = await self.async_query(
             ADT_ORB_URI,
@@ -380,7 +387,8 @@ class PulseQueryManager:
         return make_etree(code, response, url, level, error_message)
 
     async def async_fetch_version(self) -> None:
-        """Fetch ADT Pulse version.
+        """
+        Fetch ADT Pulse version.
 
         Exceptions are passed through to the caller since if this fails, there is
         probably some underlying connection issue.

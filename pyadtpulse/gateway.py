@@ -68,10 +68,12 @@ class ADTPulseGateway:
 
     @property
     def is_online(self) -> bool:
-        """Returns whether gateway is online.
+        """
+        Returns whether gateway is online.
 
         Returns:
             bool: True if gateway is online
+
         """
         with self._attribute_lock:
             return self._status_text == "ONLINE"
@@ -79,10 +81,12 @@ class ADTPulseGateway:
     @is_online.setter
     @typechecked
     def is_online(self, status: bool) -> None:
-        """Set gateway status.
+        """
+        Set gateway status.
 
         Args:
             status (bool): True if gateway is online
+
         """
         with self._attribute_lock:
             if status == self.is_online:
@@ -166,10 +170,12 @@ class ADTPulseGateway:
         self._cellular_connection_signal_strength = new_signal_strength
 
     def set_gateway_attributes(self, gateway_attributes: dict[str, str]) -> None:
-        """Set gateway attributes from dictionary.
+        """
+        Set gateway attributes from dictionary.
 
         Args:
             gateway_attributes (dict[str,str]): dictionary of gateway attributes
+
         """
         for i in (
             STRING_UPDATEABLE_FIELDS
