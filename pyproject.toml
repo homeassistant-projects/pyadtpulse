@@ -27,7 +27,6 @@ dependencies = [
 dev = [
     "aioresponses>=0.7.8",
     "bandit[sarif,toml]>=1.8.6",
-    "build>=1.2.2.post1",
     "freezegun>=1.5.2",
     "pre-commit>=4.2.0",
     "pytest>=8.4.1",
@@ -66,3 +65,7 @@ exclude = ["example-client.py"]
 [tool.ruff.format]
 quote-style = "double" # Matches black
 line-ending = "lf"     # Matches black
+
+[tool.uv.build-backend]
+module-name = "pyadtpulse"
+module-root = ""
