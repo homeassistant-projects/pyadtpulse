@@ -1,6 +1,7 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build"]
+build-backend = "uv_build"
+
 
 [project]
 name = "pyadtpulse"
@@ -27,7 +28,6 @@ dependencies = [
 dev = [
     "aioresponses>=0.7.8",
     "bandit[sarif,toml]>=1.8.6",
-    "build>=1.2.2.post1",
     "freezegun>=1.5.2",
     "pre-commit>=4.2.0",
     "pytest>=8.4.1",
@@ -41,3 +41,7 @@ dev = [
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
+
+[tool.uv.build-backend]
+module-name = "pyadtpulse"
+module-root = ""
