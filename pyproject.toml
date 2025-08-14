@@ -1,6 +1,10 @@
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"
+<<<<<<< HEAD
+=======
+
+>>>>>>> db6b0e8 (remove build dep. update build system to use uv_build)
 
 [project]
 name = "pyadtpulse"
@@ -48,6 +52,7 @@ dev = [
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
 
+<<<<<<< HEAD
 exclude = ["example-client.py"]
 
 [tool.uv]
@@ -105,3 +110,8 @@ convention = "google"
 
 
 
+=======
+[tool.uv.build-backend]
+module-name = "pyadtpulse"
+module-root = ""
+>>>>>>> db6b0e8 (remove build dep. update build system to use uv_build)
