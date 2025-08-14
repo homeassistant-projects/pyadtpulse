@@ -53,11 +53,41 @@ dev = [
 exclude_dirs = ["tests", ".venv"]
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 exclude = ["example-client.py"]
 
 [tool.uv]
 required-version = ">=0.8.0"
 
+=======
+=======
+[tool.ruff]
+line-length = 88 # Matches black
+
+lint.select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "D",  # pydocstyle
+    "UP", # pyupgrade
+    "T",  # flake8-print
+    "PL", # pylint
+]
+lint.ignore = [
+    "D203", #no-blank-line-before-class
+    "D212", #multi-line-summary-first-line
+]
+
+exclude = ["example-client.py"]
+
+[tool.ruff.format]
+quote-style = "double" # Matches black
+line-ending = "lf"     # Matches black
+
+>>>>>>> 89d1a3f (remove build dep. update build system to use uv_build)
+>>>>>>> 4db9371 (remove build dep. update build system to use uv_build)
 [tool.uv.build-backend]
 module-name = "pyadtpulse"
 module-root = ""
