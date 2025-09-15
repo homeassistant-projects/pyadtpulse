@@ -866,7 +866,7 @@ wheels = [
 
 [[package]]
 name = "pytest-isolate"
-version = "0.0.12"
+version = "0.0.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dill" },
@@ -874,9 +874,9 @@ dependencies = [
     { name = "pytest" },
     { name = "tblib" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2a/83/318942d7dfb65c02df433f95437cf58612ffcb8a8ec0a3a948c2bf5760ab/pytest_isolate-0.0.12.tar.gz", hash = "sha256:2a421a8334e5d2fffe3b7475443c61616346759585f3b23de24c9d9a7784fa89", size = 14572, upload-time = "2025-06-08T17:56:48.41Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f2/60/b431cc5995cc07953446fb96c8675fed0db4759a95d949726584746733c0/pytest_isolate-0.0.13.tar.gz", hash = "sha256:108fd19a62e09f7c71ff212229c69fbdec3632137dce7da2cdfe7926faf9a13b", size = 16058, upload-time = "2025-09-08T15:19:31.731Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/b6/dd275b04a4c8488f23b532074e735c4131fac97fc21f8aa3481e3183f3ed/pytest_isolate-0.0.12-py3-none-any.whl", hash = "sha256:b39a109985bedd4d9e1cd9e4b84ff4b5e7cfa372b3d3e6b9bef89ff54015908f", size = 13609, upload-time = "2025-06-08T17:56:47.135Z" },
+    { url = "https://files.pythonhosted.org/packages/74/c1/bd71f2f80f027625d221d3774245bdec8f77f57854261727f477d5a03161/pytest_isolate-0.0.13-py3-none-any.whl", hash = "sha256:17a50bc5f14ff37b48c150f926e9656e8b18ea87df66182a131051e673c28ed0", size = 14275, upload-time = "2025-09-08T15:19:30.837Z" },
 ]
 
 [[package]]
