@@ -7,13 +7,20 @@ name = "pyadtpulse"
 version = "1.2.11"
 description = "Python interface for ADT Pulse security systems"
 authors = [{ name = "Ryan Snodgrass" }]
-maintainers = [{ name = "Elliot Worth" }]
+maintainers = [{ name = "Elliot Worth", email = "elliotworth@protonmail.com"}]
 readme = "README.md"
 license = "Apache-2.0"
 classifiers = [
-    "Programming Language :: Python :: 3",
+    "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Developers",
     "Operating System :: OS Independent",
+
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 requires-python = ">=3.12,<3.14"
 dependencies = [
@@ -41,31 +48,60 @@ dev = [
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
 
-[tool.ruff]
-line-length = 88 # Matches black
-
-lint.select = [
-    "E",  # pycodestyle
-    "F",  # pyflakes
-    "I",  # isort
-    "B",  # flake8-bugbear
-    "C4", # flake8-comprehensions
-    "D",  # pydocstyle
-    "UP", # pyupgrade
-    "T",  # flake8-print
-    "PL", # pylint
-]
-lint.ignore = [
-    "D203", #no-blank-line-before-class
-    "D212", #multi-line-summary-first-line
-]
-
 exclude = ["example-client.py"]
 
-[tool.ruff.format]
-quote-style = "double" # Matches black
-line-ending = "lf"     # Matches black
+[tool.uv]
+required-version = ">=0.8.0"
 
 [tool.uv.build-backend]
 module-name = "pyadtpulse"
 module-root = ""
+
+
+[tool.ruff]
+line-length = 88 # Matches black
+show-fixes = true
+target-version = "py313"
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+line-ending = "auto"
+
+[tool.ruff.lint]
+ignore = [
+    "D107",    #missing-docstring-in-init
+    "PLR2004", #Magic Values
+    "D203",    #no-blank-line-before-class
+    "D212",    #multi-line-summary-first-line
+]
+select = [
+    "I",   # isort
+    "F",   # plake8-bugbear
+    "E",   # pycoyflakes
+    "W",
+    "D",   # pydocstyle
+    "PL",  # pylint
+    "RUF", # ruff
+    "UP",  # pyupgrade
+]
+
+[tool.ruff.lint.pylint]
+max-args = 10
+
+[tool.ruff.lint.isort]
+length-sort = true
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+
+
+
