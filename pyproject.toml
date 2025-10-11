@@ -54,12 +54,15 @@ exclude_dirs = ["tests", ".venv"]
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 exclude = ["example-client.py"]
 
 [tool.uv]
 required-version = ">=0.8.0"
 
 =======
+=======
+>>>>>>> b7ec926 (updated pyproject.toml with more ruff defaults and added import sorting)
 =======
 [tool.ruff]
 line-length = 88 # Matches black
@@ -80,11 +83,12 @@ lint.ignore = [
     "D212", #multi-line-summary-first-line
 ]
 
+=======
+>>>>>>> 1db3095 (updated pyproject.toml with more ruff defaults and added import sorting)
 exclude = ["example-client.py"]
 
-[tool.ruff.format]
-quote-style = "double" # Matches black
-line-ending = "lf"     # Matches black
+[tool.uv]
+required-version = ">=0.8.0"
 
 >>>>>>> 89d1a3f (remove build dep. update build system to use uv_build)
 >>>>>>> 4db9371 (remove build dep. update build system to use uv_build)
@@ -140,8 +144,11 @@ convention = "google"
 
 
 
+<<<<<<< HEAD
 =======
 [tool.uv.build-backend]
 module-name = "pyadtpulse"
 module-root = ""
 >>>>>>> db6b0e8 (remove build dep. update build system to use uv_build)
+=======
+>>>>>>> b7ec926 (updated pyproject.toml with more ruff defaults and added import sorting)
