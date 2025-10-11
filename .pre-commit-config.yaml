@@ -1,25 +1,19 @@
 ---
 fail_fast: true
 
+# To update pre-commit hooks run:
+# uv run pre-commit autoupdate
+
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
-      - id: check-yaml
-      - id: check-toml
-      - id: check-json
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: requirements-txt-fixer
-
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.3
-    hooks:
-      - id: ruff
-        args: [--fix] # run linter
-      - id: ruff-format # run formatter
-
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.20.0
-    hooks:
-      - id: pyupgrade
+-   hooks:
+    -   id: check-yaml
+    -   id: check-toml
+    -   id: check-json
+    -   id: no-commit-to-branch
+    repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+-   hooks:
+    -   id: ruff-check
+    -   id: ruff-format
+    repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.3
