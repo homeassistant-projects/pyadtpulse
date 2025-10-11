@@ -7,7 +7,7 @@ name = "pyadtpulse"
 version = "1.2.11"
 description = "Python interface for ADT Pulse security systems"
 authors = [{ name = "Ryan Snodgrass" }]
-maintainers = [{ name = "Robert Lippmann" }]
+maintainers = [{ name = "Elliot Worth" }]
 readme = "README.md"
 license = "Apache-2.0"
 classifiers = [
