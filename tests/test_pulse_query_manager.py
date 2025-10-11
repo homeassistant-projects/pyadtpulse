@@ -5,27 +5,27 @@ This module contains tests that verify the behavior of the PulseQueryManager cla
 which handles API version fetching, query retries, and connection error handling.
 """
 
-import asyncio
 import time
-from datetime import datetime, timedelta
+import asyncio
 from typing import Any, cast
+from datetime import datetime, timedelta
 
 import pytest
-from aiohttp import client_exceptions, client_reqrep
+from aiohttp import client_reqrep, client_exceptions
 from aioresponses import aioresponses
-from freezegun.api import FrozenDateTimeFactory, StepTickTimeFactory
+from freezegun.api import StepTickTimeFactory, FrozenDateTimeFactory
 
+from tests.conftest import MOCKED_API_VERSION
 from pyadtpulse.const import ADT_ORB_URI, DEFAULT_API_HOST
 from pyadtpulse.exceptions import (
-    PulseClientConnectionError,
     PulseConnectionError,
+    PulseClientConnectionError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
 )
-from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
-from pyadtpulse.pulse_connection_status import PulseConnectionStatus
 from pyadtpulse.pulse_query_manager import MAX_REQUERY_RETRIES, PulseQueryManager
-from tests.conftest import MOCKED_API_VERSION
+from pyadtpulse.pulse_connection_status import PulseConnectionStatus
+from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
 
 # Constants for backoff testing
 INITIAL_BACKOFF = 2

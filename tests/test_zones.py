@@ -7,9 +7,9 @@ from typeguard import TypeCheckError
 
 from pyadtpulse.zones import (
     ADT_NAME_TO_DEFAULT_TAGS,
-    ADTPulseFlattendZone,
-    ADTPulseZoneData,
     ADTPulseZones,
+    ADTPulseZoneData,
+    ADTPulseFlattendZone,
 )
 
 
@@ -823,7 +823,7 @@ class TestADTPulseZones:
         zones = ADTPulseZones(data)
 
         # Assert
-        assert len(zones) == 3  # noqa PLR2004
+        assert len(zones) == 3
         assert zones[1].name == "Zone 1"
         assert zones[2].name == "Zone 2"
         assert zones[3].name == "Zone 3"
@@ -866,7 +866,7 @@ class TestADTPulseZones:
         zones[3] = ADTPulseZoneData("Zone 3", "sensor-3")
 
         # Assert
-        assert len(zones) == 3  # noqa PLR2004
+        assert len(zones) == 3
         assert zones[1].name == "Zone 1"
         assert zones[2].name == "Zone 2"
         assert zones[3].name == "Zone 3"
@@ -1029,14 +1029,14 @@ class TestADTPulseZones:
         flattened_zones = zones.flatten()
 
         # Assert
-        assert len(flattened_zones) == 3  # noqa PLR2004
+        assert len(flattened_zones) == 3
         assert flattened_zones[0]["zone"] == 1
         assert flattened_zones[0]["name"] == "Zone 1"
         assert flattened_zones[0]["id_"] == "sensor-1"
-        assert flattened_zones[1]["zone"] == 2  # noqa: PLR2004
+        assert flattened_zones[1]["zone"] == 2
         assert flattened_zones[1]["name"] == "Zone 2"
         assert flattened_zones[1]["id_"] == "sensor-2"
-        assert flattened_zones[2]["zone"] == 3  # noqa: PLR2004
+        assert flattened_zones[2]["zone"] == 3
         assert flattened_zones[2]["name"] == "Zone 3"
         assert flattened_zones[2]["id_"] == "sensor-3"
 

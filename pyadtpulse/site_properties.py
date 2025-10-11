@@ -1,27 +1,27 @@
 """Pulse Site Properties."""
 
-from threading import RLock
 from warnings import warn
+from threading import RLock
 
 from typeguard import typechecked
 
-from .alarm_panel import ADTPulseAlarmPanel
-from .gateway import ADTPulseGateway
 from .util import DebugRLock, set_debug_lock
-from .zones import ADTPulseFlattendZone, ADTPulseZones
+from .zones import ADTPulseZones, ADTPulseFlattendZone
+from .gateway import ADTPulseGateway
+from .alarm_panel import ADTPulseAlarmPanel
 
 
 class ADTPulseSiteProperties:
     """Pulse Site Properties."""
 
     __slots__ = (
-        "_id",
-        "_name",
-        "_last_updated",
         "_alarm_panel",
-        "_zones",
-        "_site_lock",
         "_gateway",
+        "_id",
+        "_last_updated",
+        "_name",
+        "_site_lock",
+        "_zones",
     )
 
     @typechecked

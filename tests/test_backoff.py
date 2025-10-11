@@ -98,7 +98,7 @@ def test_increment_backoff():
     # Assert
     assert backoff._backoff_count == 1
     backoff.increment_backoff()
-    assert backoff._backoff_count == 2  # noqa: PLR2004
+    assert backoff._backoff_count == 2
 
 
 def test_reset_backoff():
@@ -368,7 +368,7 @@ def test_reset_backoff2():
     backoff.reset_backoff()
 
     # Assert
-    assert backoff._backoff_count == 5  # noqa: PLR2004
+    assert backoff._backoff_count == 5
     assert backoff._expiration_time == now + 10.0
     assert backoff.expiration_time == now + 10.0
 
@@ -634,13 +634,13 @@ async def test_calculate_backoff_interval_exceeds_max(mocker):  # noqa: PLR0915
     result = backoff._calculate_backoff_interval()
 
     # Assert
-    assert result == 2.0  # noqa: PLR2004
+    assert result == 2.0
     backoff._backoff_count = 3
     result = backoff._calculate_backoff_interval()
-    assert result == 4.0  # noqa: PLR2004
+    assert result == 4.0
     backoff._backoff_count = 4
     result = backoff._calculate_backoff_interval()
-    assert result == 8.0  # noqa: PLR2004
+    assert result == 8.0
     backoff._backoff_count = 5
     result = backoff._calculate_backoff_interval()
     assert result == max_backoff_interval
@@ -796,32 +796,32 @@ async def test_increment_backoff_and_wait_for_backoff(mock_sleep):
     backoff.increment_backoff()
 
     await backoff.wait_for_backoff()
-    assert mock_sleep.call_count == 1  # noqa: PLR2004
+    assert mock_sleep.call_count == 1
     assert mock_sleep.call_args_list[0][0][0] == initial_backoff_interval
     backoff.increment_backoff()
 
     await backoff.wait_for_backoff()
-    assert mock_sleep.call_count == 2  # noqa: PLR2004
+    assert mock_sleep.call_count == 2
     assert mock_sleep.call_args_list[1][0][0] == 2 * initial_backoff_interval
     backoff.increment_backoff()
 
     await backoff.wait_for_backoff()
-    assert mock_sleep.call_count == 3  # noqa: PLR2004
+    assert mock_sleep.call_count == 3
     assert mock_sleep.call_args_list[2][0][0] == 4 * initial_backoff_interval
     backoff.increment_backoff()
 
     # Additional call after 4 iterations
     await backoff.wait_for_backoff()
-    assert mock_sleep.call_count == 4  # noqa: PLR2004
+    assert mock_sleep.call_count == 4
     assert mock_sleep.call_args_list[3][0][0] == 8 * initial_backoff_interval
     backoff.increment_backoff()
 
     await backoff.wait_for_backoff()
-    assert mock_sleep.call_count == 5  # noqa: PLR2004
+    assert mock_sleep.call_count == 5
     assert mock_sleep.call_args_list[4][0][0] == max_backoff_interval
     backoff.increment_backoff()
     await backoff.wait_for_backoff()
-    assert mock_sleep.call_count == 6  # noqa: PLR2004
+    assert mock_sleep.call_count == 6
     assert mock_sleep.call_args_list[4][0][0] == max_backoff_interval
 
 
@@ -852,4 +852,4 @@ async def test_absolute_backoff_time(mock_sleep, freeze_time_to_now):
     assert backoff.expiration_time == time() + 100
     await backoff.wait_for_backoff()
     assert mock_sleep.call_count == 1
-    assert mock_sleep.call_args_list[0][0][0] == 100  # noqa: PLR2004
+    assert mock_sleep.call_args_list[0][0][0] == 100

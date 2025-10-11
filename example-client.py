@@ -1,33 +1,33 @@
 #!/usr/bin/env python
 """Sample client for using pyadtpulse."""
 
-import argparse
-import asyncio
-import json
-import logging
 import sys
+import json
+import asyncio
+import logging
+import argparse
+from time import time, sleep
 from pprint import pprint
-from time import sleep, time
 
 from pyadtpulse import PyADTPulse
+from pyadtpulse.site import ADTPulseSite
 from pyadtpulse.const import (
-    ADT_DEFAULT_KEEPALIVE_INTERVAL,
-    ADT_DEFAULT_POLL_INTERVAL,
-    ADT_DEFAULT_RELOGIN_INTERVAL,
     API_HOST_CA,
     DEFAULT_API_HOST,
+    ADT_DEFAULT_POLL_INTERVAL,
+    ADT_DEFAULT_RELOGIN_INTERVAL,
+    ADT_DEFAULT_KEEPALIVE_INTERVAL,
 )
 from pyadtpulse.exceptions import (
-    PulseAuthenticationError,
-    PulseClientConnectionError,
-    PulseConnectionError,
-    PulseGatewayOfflineError,
     PulseLoginException,
+    PulseConnectionError,
+    PulseAuthenticationError,
+    PulseGatewayOfflineError,
+    PulseClientConnectionError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
 )
 from pyadtpulse.pyadtpulse_async import PyADTPulseAsync
-from pyadtpulse.site import ADTPulseSite
 
 USER = "adtpulse_user"
 PASSWD = "adtpulse_password"

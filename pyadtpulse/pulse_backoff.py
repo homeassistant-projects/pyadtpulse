@@ -2,13 +2,13 @@
 
 import asyncio
 import datetime
-from logging import getLogger
 from time import time
+from logging import getLogger
 
 from typeguard import typechecked
 
-from .const import ADT_MAX_BACKOFF
 from .util import set_debug_lock
+from .const import ADT_MAX_BACKOFF
 
 LOG = getLogger(__name__)
 
@@ -18,17 +18,17 @@ class PulseBackoff:
 
     __slots__ = (
         "_b_lock",
+        "_backoff_count",
+        "_detailed_debug_logging",
+        "_expiration_time",
         "_initial_backoff_interval",
         "_max_backoff_interval",
-        "_backoff_count",
-        "_expiration_time",
         "_name",
-        "_detailed_debug_logging",
         "_threshold",
     )
 
     @typechecked
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         name: str,
         initial_backoff_interval: float,

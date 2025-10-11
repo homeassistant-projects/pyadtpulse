@@ -6,19 +6,19 @@ which handles site configuration, zones, alarm panel, and gateway functionality.
 """
 
 import time
-from multiprocessing import RLock
 from typing import cast
+from multiprocessing import RLock
 
 import pytest
 
-from pyadtpulse.alarm_panel import ADTPulseAlarmPanel
 from pyadtpulse.const import DEFAULT_API_HOST
-from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProperties
-from pyadtpulse.pulse_connection import PulseConnection
-from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
-from pyadtpulse.pulse_connection_status import PulseConnectionStatus
+from pyadtpulse.zones import ADTPulseZones, ADTPulseZoneData, ADTPulseFlattendZone
+from pyadtpulse.alarm_panel import ADTPulseAlarmPanel
 from pyadtpulse.site_properties import ADTPulseSiteProperties
-from pyadtpulse.zones import ADTPulseFlattendZone, ADTPulseZoneData, ADTPulseZones
+from pyadtpulse.pulse_connection import PulseConnection
+from pyadtpulse.pulse_connection_status import PulseConnectionStatus
+from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
+from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProperties
 
 # Constants
 TEST_SITE_ID = "12345"

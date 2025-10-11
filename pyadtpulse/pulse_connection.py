@@ -4,37 +4,37 @@ ADT Pulse connection. End users should probably not call this directly.
 This is the main interface to the http functions to access ADT Pulse.
 """
 
-import logging
 import re
-from asyncio import AbstractEventLoop
+import logging
 from time import time
+from asyncio import AbstractEventLoop
 
 from lxml import html
-from typeguard import typechecked
 from yarl import URL
+from typeguard import typechecked
 
+from .util import make_etree, set_debug_lock
 from .const import (
-    ADT_DEFAULT_LOGIN_TIMEOUT,
     ADT_LOGIN_URI,
     ADT_LOGOUT_URI,
-    ADT_MFA_FAIL_URI,
     ADT_SUMMARY_URI,
+    ADT_MFA_FAIL_URI,
+    ADT_DEFAULT_LOGIN_TIMEOUT,
 )
 from .exceptions import (
+    PulseMFARequiredError,
+    PulseNotLoggedInError,
     PulseAccountLockedError,
     PulseAuthenticationError,
     PulseClientConnectionError,
-    PulseMFARequiredError,
-    PulseNotLoggedInError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
 )
-from .pulse_authentication_properties import PulseAuthenticationProperties
 from .pulse_backoff import PulseBackoff
-from .pulse_connection_properties import PulseConnectionProperties
-from .pulse_connection_status import PulseConnectionStatus
 from .pulse_query_manager import PulseQueryManager
-from .util import make_etree, set_debug_lock
+from .pulse_connection_status import PulseConnectionStatus
+from .pulse_connection_properties import PulseConnectionProperties
+from .pulse_authentication_properties import PulseAuthenticationProperties
 
 LOG = logging.getLogger(__name__)
 
@@ -46,10 +46,10 @@ class PulseConnection(PulseQueryManager):
     """ADT Pulse connection related attributes."""
 
     __slots__ = (
-        "_pc_attribute_lock",
         "_authentication_properties",
         "_login_backoff",
         "_login_in_progress",
+        "_pc_attribute_lock",
     )
 
     @typechecked

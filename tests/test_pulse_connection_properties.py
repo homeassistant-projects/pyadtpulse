@@ -5,7 +5,7 @@ from asyncio import AbstractEventLoop
 import pytest
 from aiohttp import ClientSession
 
-from pyadtpulse.const import ADT_DEFAULT_HTTP_USER_AGENT, API_HOST_CA, DEFAULT_API_HOST
+from pyadtpulse.const import API_HOST_CA, DEFAULT_API_HOST, ADT_DEFAULT_HTTP_USER_AGENT
 from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
 
 

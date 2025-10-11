@@ -1,22 +1,22 @@
 """Base Python Class for pyadtpulse."""
 
+import time
 import asyncio
 import logging
-import time
-from threading import RLock, Thread
 from warnings import warn
+from threading import RLock, Thread
 
-import aiohttp_fast_zlib
 import uvloop
+import aiohttp_fast_zlib
 
+from .util import DebugRLock, set_debug_lock
 from .const import (
-    ADT_DEFAULT_HTTP_USER_AGENT,
-    ADT_DEFAULT_KEEPALIVE_INTERVAL,
-    ADT_DEFAULT_RELOGIN_INTERVAL,
     DEFAULT_API_HOST,
+    ADT_DEFAULT_HTTP_USER_AGENT,
+    ADT_DEFAULT_RELOGIN_INTERVAL,
+    ADT_DEFAULT_KEEPALIVE_INTERVAL,
 )
 from .pyadtpulse_async import SYNC_CHECK_TASK_NAME, PyADTPulseAsync
-from .util import DebugRLock, set_debug_lock
 
 aiohttp_fast_zlib.enable()
 LOG = logging.getLogger(__name__)
@@ -25,9 +25,9 @@ LOG = logging.getLogger(__name__)
 class PyADTPulse(PyADTPulseAsync):
     """Base object for ADT Pulse service."""
 
-    __slots__ = ("_session_thread", "_p_attribute_lock", "_login_exception")
+    __slots__ = ("_login_exception", "_p_attribute_lock", "_session_thread")
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         username: str,
         password: str,

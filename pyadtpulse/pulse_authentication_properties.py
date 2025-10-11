@@ -11,12 +11,12 @@ class PulseAuthenticationProperties:
     """Pulse Authentication Properties."""
 
     __slots__ = (
-        "_username",
-        "_password",
         "_fingerprint",
-        "_paa_attribute_lock",
         "_last_login_time",
+        "_paa_attribute_lock",
+        "_password",
         "_site_id",
+        "_username",
     )
 
     @staticmethod

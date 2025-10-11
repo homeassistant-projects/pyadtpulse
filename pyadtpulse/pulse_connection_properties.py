@@ -1,20 +1,20 @@
 """Pulse connection info."""
 
-from asyncio import AbstractEventLoop
 from re import search
+from asyncio import AbstractEventLoop
 
 from aiohttp import ClientSession
 from typeguard import typechecked
 
+from .util import set_debug_lock
 from .const import (
-    ADT_DEFAULT_HTTP_ACCEPT_HEADERS,
+    API_PREFIX,
+    API_HOST_CA,
+    DEFAULT_API_HOST,
     ADT_DEFAULT_HTTP_USER_AGENT,
     ADT_DEFAULT_SEC_FETCH_HEADERS,
-    API_HOST_CA,
-    API_PREFIX,
-    DEFAULT_API_HOST,
+    ADT_DEFAULT_HTTP_ACCEPT_HEADERS,
 )
-from .util import set_debug_lock
 
 
 class PulseConnectionProperties:
@@ -22,13 +22,13 @@ class PulseConnectionProperties:
 
     __slots__ = (
         "_api_host",
+        "_api_version",
+        "_debug_locks",
+        "_detailed_debug_logging",
+        "_loop",
+        "_pci_attribute_lock",
         "_session",
         "_user_agent",
-        "_loop",
-        "_api_version",
-        "_pci_attribute_lock",
-        "_detailed_debug_logging",
-        "_debug_locks",
     )
 
     @staticmethod
@@ -198,7 +198,7 @@ class PulseConnectionProperties:
 
         def check_version_string(value: str):
             parts = value.split("-")
-            if len(parts) == 2:  # noqa: PLR2004
+            if len(parts) == 2:
                 version_parts = parts[0].split(".")
                 if not (
                     version_parts[0].isdigit()
@@ -209,9 +209,9 @@ class PulseConnectionProperties:
                     raise ValueError(
                         "API version must be in the form major.minor.patch-subpatch"
                     )
-                if len(version_parts) == 3 and version_parts[0].isdigit():  # noqa: PLR2004
+                if len(version_parts) == 3 and version_parts[0].isdigit():
                     major_version = int(version_parts[0])
-                    if major_version >= 26:  # noqa: PLR2004
+                    if major_version >= 26:
                         return
                     else:
                         raise ValueError("API version is numeric but less than 26")

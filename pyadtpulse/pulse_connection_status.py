@@ -4,16 +4,16 @@ from asyncio import Event
 
 from typeguard import typechecked
 
-from .pulse_backoff import PulseBackoff
 from .util import set_debug_lock
+from .pulse_backoff import PulseBackoff
 
 
 class PulseConnectionStatus:
     """Pulse Connection Status."""
 
     __slots__ = (
-        "_backoff",
         "_authenticated_flag",
+        "_backoff",
         "_pcs_attribute_lock",
     )
 

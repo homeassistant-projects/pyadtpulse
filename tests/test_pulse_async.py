@@ -1,37 +1,37 @@
 """Test Pulse Query Manager."""
 
-import asyncio
 import re
-from collections.abc import Callable
+import asyncio
 from typing import Any, Literal
 from unittest.mock import AsyncMock, patch
+from collections.abc import Callable
 
-import aiohttp
 import pytest
+import aiohttp
 from aioresponses import aioresponses
 
+from tests.conftest import LoginType, add_logout, add_signin, add_custom_response
 from pyadtpulse.const import (
-    ADT_DEFAULT_POLL_INTERVAL,
-    ADT_DEVICE_URI,
-    ADT_LOGIN_URI,
-    ADT_LOGOUT_URI,
     ADT_ORB_URI,
+    ADT_LOGIN_URI,
+    ADT_DEVICE_URI,
+    ADT_LOGOUT_URI,
     ADT_SUMMARY_URI,
-    ADT_SYNC_CHECK_URI,
     ADT_TIMEOUT_URI,
     DEFAULT_API_HOST,
+    ADT_SYNC_CHECK_URI,
+    ADT_DEFAULT_POLL_INTERVAL,
 )
 from pyadtpulse.exceptions import (
-    PulseAuthenticationError,
     PulseConnectionError,
-    PulseGatewayOfflineError,
     PulseMFARequiredError,
     PulseNotLoggedInError,
+    PulseAuthenticationError,
+    PulseGatewayOfflineError,
     PulseServerConnectionError,
 )
-from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProperties
 from pyadtpulse.pyadtpulse_async import PyADTPulseAsync
-from tests.conftest import LoginType, add_custom_response, add_logout, add_signin
+from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProperties
 
 DEFAULT_SYNC_CHECK = "234532-456432-0"
 NEXT_SYNC_CHECK = "234533-456432-0"
@@ -65,7 +65,7 @@ async def test_mocked_responses(
             response = await session.get(url)
 
             # Assert the status code is 200
-            assert response.status == 200  # noqa: PLR2004
+            assert response.status == 200
 
             # Assert the content matches the content of the file
             expected_content = read_file(file_name)
@@ -76,7 +76,7 @@ async def test_mocked_responses(
             response = await session.get(
                 f"{get_mocked_url(ADT_DEVICE_URI)}?id={device_id}"
             )
-            assert response.status == 200  # noqa: PLR2004
+            assert response.status == 200
             expected_content = read_file(f"device_{device_id}.html")
             actual_content = await response.text()
             assert actual_content == expected_content
@@ -89,7 +89,7 @@ async def test_mocked_responses(
             file_name="signin.html",
         )
         response = await session.get(f"{DEFAULT_API_HOST}/", allow_redirects=True)
-        assert response.status == 200  # noqa: PLR2004
+        assert response.status == 200
         actual_content = await response.text()
         expected_content = read_file("signin.html")
         assert actual_content == expected_content
@@ -100,7 +100,7 @@ async def test_mocked_responses(
             file_name="signin.html",
         )
         response = await session.get(get_mocked_url(ADT_LOGOUT_URI))
-        assert response.status == 200  # noqa: PLR2004
+        assert response.status == 200
         expected_content = read_file("signin.html")
         actual_content = await response.text()
         assert actual_content == expected_content
@@ -108,7 +108,7 @@ async def test_mocked_responses(
             LoginType.SUCCESS, mocked_server_responses, get_mocked_url, read_file
         )
         response = await session.post(get_mocked_url(ADT_LOGIN_URI))
-        assert response.status == 200  # noqa: PLR2004
+        assert response.status == 200
         expected_content = read_file(static_responses[get_mocked_url(ADT_SUMMARY_URI)])
         actual_content = await response.text()
         assert actual_content == expected_content
@@ -117,7 +117,7 @@ async def test_mocked_responses(
         response = await session.get(
             get_mocked_url(ADT_SYNC_CHECK_URI), params={"ts": "first call"}
         )
-        assert response.status == 200  # noqa: PLR2004
+        assert response.status == 200
         actual_content = await response.text()
         expected_content = "1-0-0"
         assert actual_content == expected_content
@@ -418,7 +418,7 @@ async def test_keepalive_check(
     read_file: Callable[..., str],
 ):
     """Test the keepalive check."""
-    p, response = await adt_pulse_instance  # type: ignore
+    p, _response = await adt_pulse_instance  # type: ignore
     assert p._timeout_task is not None
     await asyncio.sleep(0)
 
@@ -563,7 +563,7 @@ async def test_gateway_offline(
         pattern, body=DEFAULT_SYNC_CHECK, content_type="text/html", repeat=True
     )
     add_logout(response, get_mocked_url, read_file)
-    assert p.site.gateway.poll_interval == 2.0  # noqa: PLR2004
+    assert p.site.gateway.poll_interval == 2.0
     # FIXME: why + 2?
     for _i in range(num_backoffs + 2):
         with pytest.raises(PulseGatewayOfflineError):
@@ -651,7 +651,7 @@ async def test_sync_check_disconnect(
     pattern = make_sync_check_pattern(get_mocked_url)
     responses.get(pattern, body=DEFAULT_SYNC_CHECK, content_type="text/html")
     responses.get(get_mocked_url(ADT_ORB_URI), body=read_file("orb.html"), repeat=True)
-    while p._pulse_connection_status.get_backoff().get_current_backoff_interval() < 15:  # noqa: PLR2004
+    while p._pulse_connection_status.get_backoff().get_current_backoff_interval() < 15:
         with pytest.raises(PulseServerConnectionError):
             await p.wait_for_update()
     # check recovery

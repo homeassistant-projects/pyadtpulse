@@ -62,7 +62,7 @@ def test_poll_interval_property():
     gateway = ADTPulseGateway()
     assert gateway.poll_interval == ADT_DEFAULT_POLL_INTERVAL
     gateway.poll_interval = 60.0
-    assert gateway.poll_interval == 60.0  # noqa: PLR2004
+    assert gateway.poll_interval == 60.0
 
 
 # gateway MAC addresses can be set and retrieved
@@ -80,7 +80,7 @@ def test_cellular_connection_signal_strength():
     """Test that cellular connection signal strength can be set and retrieved."""
     gateway = ADTPulseGateway()
     gateway.cellular_connection_signal_strength = -70.5
-    assert gateway.cellular_connection_signal_strength == -70.5  # noqa: PLR2004
+    assert gateway.cellular_connection_signal_strength == -70.5
 
 
 # set_gateway_attributes method sets attributes correctly
@@ -113,7 +113,7 @@ def test_set_gateway_attributes_sets_attributes_correctly():
     assert gateway.cellular_connection_status == "Connected"
     assert gateway.broadband_lan_mac == "00:11:22:33:44:55"
     assert gateway.device_lan_mac == "AA:BB:CC:DD:EE:FF"
-    assert gateway.cellular_connection_signal_strength == 4.5  # noqa: PLR2004
+    assert gateway.cellular_connection_signal_strength == 4.5
 
 
 # backoff object can be incremented and reset correctly
@@ -164,7 +164,7 @@ async def test_backoff_wait_time():
 
     # Assert
     end_time = time.time()
-    assert end_time - start_time >= 5.0  # noqa: PLR2004
+    assert end_time - start_time >= 5.0
 
 
 def test_set_gateway_attributes_empty_string_fixed():
@@ -304,14 +304,14 @@ def test_custom_values():
     assert gateway.backoff._threshold == 0
     assert gateway.model == "Custom Model"
     assert gateway.serial_number == "Custom Serial Number"
-    assert gateway.next_update == 1234567890  # noqa: PLR2004
-    assert gateway.last_update == 9876543210  # noqa: PLR2004
+    assert gateway.next_update == 1234567890
+    assert gateway.last_update == 9876543210
     assert gateway.firmware_version == "Custom Firmware Version"
     assert gateway.hardware_version == "Custom Hardware Version"
     assert gateway.primary_connection_type == "Custom Connection Type"
     assert gateway.broadband_connection_status == "Custom Broadband Status"
     assert gateway.cellular_connection_status == "Custom Cellular Status"
-    assert gateway._cellular_connection_signal_strength == 0.5  # noqa: PLR2004
+    assert gateway._cellular_connection_signal_strength == 0.5
     assert gateway.broadband_lan_ip_address == IPv4Address("192.168.0.1")
     assert gateway._broadband_lan_mac == "00:11:22:33:44:55"
     assert gateway.device_lan_ip_address == IPv4Address("192.168.0.2")

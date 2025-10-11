@@ -1,42 +1,42 @@
 """Pulse Query Manager."""
 
-from asyncio import wait_for
-from datetime import datetime
 from http import HTTPStatus
-from logging import getLogger
 from time import time
+from asyncio import wait_for
+from logging import getLogger
+from datetime import datetime
 
+from lxml import html
+from yarl import URL
 from aiohttp import (
-    ClientConnectionError,
-    ClientConnectorError,
     ClientError,
-    ClientResponse,
-    ClientResponseError,
     ClientTimeout,
+    ClientResponse,
+    ServerTimeoutError,
+    ClientResponseError,
+    ClientConnectorError,
+    ClientConnectionError,
     ServerConnectionError,
     ServerDisconnectedError,
-    ServerTimeoutError,
 )
-from lxml import html
 from typeguard import typechecked
-from yarl import URL
 
+from .util import make_etree, set_debug_lock
 from .const import (
-    ADT_DEFAULT_LOGIN_TIMEOUT,
-    ADT_HTTP_BACKGROUND_URIS,
     ADT_ORB_URI,
+    ADT_HTTP_BACKGROUND_URIS,
+    ADT_DEFAULT_LOGIN_TIMEOUT,
     ADT_OTHER_HTTP_ACCEPT_HEADERS,
 )
 from .exceptions import (
-    PulseClientConnectionError,
     PulseNotLoggedInError,
+    PulseClientConnectionError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
 )
 from .pulse_backoff import PulseBackoff
-from .pulse_connection_properties import PulseConnectionProperties
 from .pulse_connection_status import PulseConnectionStatus
-from .util import make_etree, set_debug_lock
+from .pulse_connection_properties import PulseConnectionProperties
 
 LOG = getLogger(__name__)
 
@@ -53,10 +53,10 @@ class PulseQueryManager:
     """Pulse Query Manager."""
 
     __slots__ = (
-        "_pqm_attribute_lock",
         "_connection_properties",
         "_connection_status",
         "_debug_locks",
+        "_pqm_attribute_lock",
     )
 
     @staticmethod
@@ -167,8 +167,8 @@ class PulseQueryManager:
                 str(e), self._connection_status.get_backoff()
             )
         if (
-            isinstance(e, ClientConnectionError)
-            and "Connection refused" in str(e)
+            (isinstance(e, ClientConnectionError)
+            and "Connection refused" in str(e))
             or ("timed out") in str(e)
         ):
             raise PulseServerConnectionError(
@@ -184,7 +184,7 @@ class PulseQueryManager:
         raise PulseClientConnectionError(str(e), self._connection_status.get_backoff())
 
     @typechecked
-    async def async_query(  # noqa: PLR0912, PLR0913, PLR0915
+    async def async_query(  # noqa: PLR0912, PLR0915
         self,
         uri: str,
         method: str = "GET",

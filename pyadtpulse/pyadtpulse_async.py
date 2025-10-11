@@ -1,43 +1,43 @@
 """ADT Pulse Async API."""
 
-import asyncio
-import logging
 import re
 import time
+import asyncio
+import logging
 from random import randint
 from warnings import warn
 
 from lxml import html
-from typeguard import typechecked
 from yarl import URL
+from typeguard import typechecked
 
-from .alarm_panel import ADT_ALARM_UNKNOWN
+from .site import ADTPulseSite
+from .util import set_debug_lock, handle_response
 from .const import (
-    ADT_DEFAULT_HTTP_USER_AGENT,
-    ADT_DEFAULT_KEEPALIVE_INTERVAL,
-    ADT_DEFAULT_RELOGIN_INTERVAL,
-    ADT_GATEWAY_STRING,
-    ADT_SYNC_CHECK_URI,
     ADT_TIMEOUT_URI,
     DEFAULT_API_HOST,
+    ADT_GATEWAY_STRING,
+    ADT_SYNC_CHECK_URI,
+    ADT_DEFAULT_HTTP_USER_AGENT,
+    ADT_DEFAULT_RELOGIN_INTERVAL,
+    ADT_DEFAULT_KEEPALIVE_INTERVAL,
 )
 from .exceptions import (
-    PulseAccountLockedError,
-    PulseAuthenticationError,
-    PulseClientConnectionError,
-    PulseGatewayOfflineError,
     PulseMFARequiredError,
     PulseNotLoggedInError,
+    PulseAccountLockedError,
+    PulseAuthenticationError,
+    PulseGatewayOfflineError,
+    PulseClientConnectionError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
 )
-from .pulse_authentication_properties import PulseAuthenticationProperties
+from .alarm_panel import ADT_ALARM_UNKNOWN
 from .pulse_connection import PulseConnection
-from .pulse_connection_properties import PulseConnectionProperties
-from .pulse_connection_status import PulseConnectionStatus
 from .pyadtpulse_properties import PyADTPulseProperties
-from .site import ADTPulseSite
-from .util import handle_response, set_debug_lock
+from .pulse_connection_status import PulseConnectionStatus
+from .pulse_connection_properties import PulseConnectionProperties
+from .pulse_authentication_properties import PulseAuthenticationProperties
 
 LOG = logging.getLogger(__name__)
 SYNC_CHECK_TASK_NAME = "ADT Pulse Sync Check Task"
@@ -51,23 +51,23 @@ class PyADTPulseAsync:
     """ADT Pulse Async API."""
 
     __slots__ = (
-        "_sync_task",
-        "_timeout_task",
-        "_pa_attribute_lock",
-        "_pulse_properties",
         "_authentication_properties",
-        "_pulse_connection_properties",
-        "_pulse_connection",
-        "_pulse_connection_status",
-        "_site",
         "_detailed_debug_logging",
+        "_pa_attribute_lock",
+        "_pulse_connection",
+        "_pulse_connection_properties",
+        "_pulse_connection_status",
+        "_pulse_properties",
+        "_site",
         "_sync_check_exception",
         "_sync_check_sleeping",
+        "_sync_task",
+        "_timeout_task",
         "_updated_zones",
     )
 
     @typechecked
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         username: str,
         password: str,
@@ -406,7 +406,7 @@ class PyADTPulseAsync:
 
         while True:
             count += 1
-            if count > 5:  # noqa: PLR2004
+            if count > 5:
                 log_level = logging.WARNING
             LOG.log(log_level, "%s performming loop login", task_name)
             try:
@@ -422,8 +422,8 @@ class PyADTPulseAsync:
                     ex.args[0],
                 )
                 if (
-                    log_level == logging.WARNING
-                    and self._sync_check_exception is None
+                    (log_level == logging.WARNING
+                    and self._sync_check_exception is None)
                     or self._sync_check_exception != ex
                 ):
                     self._set_update_exception(ex)
@@ -486,7 +486,7 @@ class PyADTPulseAsync:
                     LOG.warning(warning_msg)
                 return False
             split_text = response_text.split("-")
-            if int(split_text[0]) > 9 or int(split_text[1]) > 9:  # noqa: PLR2004
+            if int(split_text[0]) > 9 or int(split_text[1]) > 9:
                 return False
             return True
 

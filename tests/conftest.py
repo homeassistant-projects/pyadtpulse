@@ -3,17 +3,17 @@
 import os
 import re
 import sys
-from collections.abc import Generator
-from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, patch
 from urllib import parse
+from pathlib import Path
+from datetime import datetime
+from unittest.mock import AsyncMock, patch
+from collections.abc import Generator
 
-import freezegun
 import pytest
-from aiohttp import client_exceptions, web
+import freezegun
+from aiohttp import web, client_exceptions
 from aioresponses import aioresponses
 
 # Get the root directory of your project
@@ -25,21 +25,21 @@ test_file_dir = project_root / "data_files"
 # pylint: disable=wrong-import-position
 # ruff: noqa: E402
 # flake8: noqa: E402
+from pyadtpulse.util import remove_prefix
 from pyadtpulse.const import (
-    ADT_DEVICE_URI,
-    ADT_GATEWAY_URI,
-    ADT_LOGIN_URI,
-    ADT_LOGOUT_URI,
-    ADT_MFA_FAIL_URI,
     ADT_ORB_URI,
+    ADT_LOGIN_URI,
+    ADT_DEVICE_URI,
+    ADT_LOGOUT_URI,
+    ADT_SYSTEM_URI,
+    ADT_GATEWAY_URI,
     ADT_SUMMARY_URI,
+    ADT_MFA_FAIL_URI,
+    DEFAULT_API_HOST,
     ADT_SYNC_CHECK_URI,
     ADT_SYSTEM_SETTINGS,
-    ADT_SYSTEM_URI,
-    DEFAULT_API_HOST,
 )
 from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
-from pyadtpulse.util import remove_prefix
 
 MOCKED_API_VERSION = "27.0.0-140"
 
@@ -190,7 +190,7 @@ def mocked_server_responses(
     read_file,
     get_mocked_url,
     extract_ids_from_data_directory: list[str],
-) -> Generator[aioresponses, Any, None]:
+) -> Generator[aioresponses, Any]:
     """Fixture to get the test mapped responses."""
     static_responses = get_mocked_mapped_static_responses
     with aioresponses() as responses:
@@ -247,7 +247,7 @@ def mocked_server_responses(
         yield responses
 
 
-def add_custom_response(  # noqa: PLR0913
+def add_custom_response(
     mocked_server_responses,
     read_file,
     url: str,
@@ -366,7 +366,7 @@ class PulseMockedWebServer:
 
         # Simulate service unavailable for a specific path
         def handle_service_unavailable(path: str) -> web.Response | None:
-            if path == "/service_unavailable" or self.status_code == 503:  # noqa: PLR2004
+            if path == "/service_unavailable" or self.status_code == 503:
                 retry_after = retry_after_param[0] if retry_after_param else None
                 self.retry_after_header = str(parse_retry_after(retry_after))
                 self.status_code = 503
@@ -383,7 +383,7 @@ class PulseMockedWebServer:
 
         def handle_rate_limit_exceeded(path: str) -> web.Response | None:
             # Simulate rate limit exceeded for a specific path
-            if path == "/rate_limit_exceeded" or self.status_code == 429:  # noqa: PLR2004
+            if path == "/rate_limit_exceeded" or self.status_code == 429:
                 retry_after = retry_after_param[0] if retry_after_param else None
                 self.retry_after_header = str(parse_retry_after(retry_after))
                 self.status_code = 429

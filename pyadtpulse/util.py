@@ -1,12 +1,12 @@
 """Utility functions for pyadtpulse."""
 
-import logging
-import string
 import sys
+import string
+import logging
 from base64 import urlsafe_b64encode
-from datetime import datetime, timedelta
-from pathlib import Path
 from random import randint
+from pathlib import Path
+from datetime import datetime, timedelta
 from threading import RLock, current_thread
 
 from lxml import html
@@ -44,7 +44,7 @@ def handle_response(code: int, url: URL | None, level: int, error_message: str) 
         bool: True if no error occurred.
 
     """
-    if code >= 400:  # noqa: PLR2004
+    if code >= 400:
         LOG.log(level, "%s: error code = %s from %s", error_message, code, url)
         return False
     return True
@@ -232,7 +232,7 @@ def parse_pulse_datetime(datestring: str) -> datetime:
     """
     datestring = datestring.replace("\xa0", " ").rstrip()
     split_string = [s for s in datestring.split(" ") if s.strip()]
-    if len(split_string) < 3:  # noqa: PLR2004
+    if len(split_string) < 3:
         raise ValueError("Invalid datestring")
     t = datetime.today()
     if split_string[0].lstrip() == "Today":

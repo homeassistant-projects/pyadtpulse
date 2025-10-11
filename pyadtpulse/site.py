@@ -1,25 +1,25 @@
 """Module representing an ADT Pulse Site."""
 
-import logging
 import re
-from asyncio import Task, create_task, gather, get_event_loop, run_coroutine_threadsafe
-from datetime import datetime
+import logging
 from time import time
+from asyncio import Task, gather, create_task, get_event_loop, run_coroutine_threadsafe
+from datetime import datetime
 
 from lxml import html
 from typeguard import typechecked
 
-from .const import ADT_DEVICE_URI, ADT_GATEWAY_STRING, ADT_GATEWAY_URI, ADT_SYSTEM_URI
+from .util import make_etree, remove_prefix, parse_pulse_datetime
+from .const import ADT_DEVICE_URI, ADT_SYSTEM_URI, ADT_GATEWAY_URI, ADT_GATEWAY_STRING
+from .zones import ADTPulseZones, ADTPulseFlattendZone
 from .exceptions import (
-    PulseClientConnectionError,
     PulseGatewayOfflineError,
+    PulseClientConnectionError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
 )
-from .pulse_connection import PulseConnection
 from .site_properties import ADTPulseSiteProperties
-from .util import make_etree, parse_pulse_datetime, remove_prefix
-from .zones import ADTPulseFlattendZone, ADTPulseZones
+from .pulse_connection import PulseConnection
 
 LOG = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ SECURITY_PANEL_NAME = "Security Panel"
 class ADTPulseSite(ADTPulseSiteProperties):
     """Represents an individual ADT Pulse site."""
 
-    __slots__ = ("_pulse_connection", "_trouble_zones", "_tripped_zones")
+    __slots__ = ("_pulse_connection", "_tripped_zones", "_trouble_zones")
 
     @typechecked
     def __init__(self, pulse_connection: PulseConnection, site_id: str, name: str):
@@ -201,7 +201,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
             Returns None if successful, otherwise the zone ID if present.
             """
             zone_id: str | None = None
-            if row_tds and len(row_tds) > 4:  # noqa: PLR2004
+            if row_tds and len(row_tds) > 4:
                 zone_name: str = row_tds[1].text_content().strip()
                 zone_id = row_tds[2].text_content().strip()
                 zone_type: str = row_tds[4].text_content().strip()

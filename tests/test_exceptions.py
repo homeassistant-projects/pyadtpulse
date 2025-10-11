@@ -5,14 +5,14 @@ from time import time
 import pytest
 
 from pyadtpulse.exceptions import (
-    PulseAccountLockedError,
-    PulseAuthenticationError,
-    PulseClientConnectionError,
-    PulseConnectionError,
-    PulseExceptionWithBackoff,
-    PulseExceptionWithRetry,
     PulseLoginException,
+    PulseConnectionError,
     PulseNotLoggedInError,
+    PulseAccountLockedError,
+    PulseExceptionWithRetry,
+    PulseAuthenticationError,
+    PulseExceptionWithBackoff,
+    PulseClientConnectionError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
 )
@@ -78,17 +78,17 @@ class TestCodeUnderTest:
 
     def test_pulse_exception_with_backoff_invalid_initialization(self):
         """Test PulseExceptionWithBackoff invalid initialization."""
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):
             PulseExceptionWithBackoff(123, "backoff")  # type: ignore
 
     def test_pulse_exception_with_retry_invalid_initialization(self):
         """Test PulseExceptionWithRetry invalid initialization."""
         backoff = PulseBackoff("test", 1.0)
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):
             PulseExceptionWithRetry(123, backoff, "retry")  # type: ignore
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):
             PulseExceptionWithRetry("error", "backoff", time() + 10)  # type: ignore
-        with pytest.raises(Exception):  # noqa: B017
+        with pytest.raises(Exception):
             PulseExceptionWithRetry("error", backoff, "retry")  # type: ignore
 
     def test_pulse_exception_with_retry_past_retry_time(self):
@@ -101,7 +101,7 @@ class TestCodeUnderTest:
                 "retry must be in the future", backoff, retry_time
             )
         # 1 backoff for increment
-        assert backoff.backoff_count == 2  # noqa: PLR2004
+        assert backoff.backoff_count == 2
         assert backoff.expiration_time == 0.0
 
     def test_pulse_service_temporarily_unavailable_error_past_retry_time_fixed(self):
@@ -111,7 +111,7 @@ class TestCodeUnderTest:
         retry_time = time() - 10
         with pytest.raises(PulseServiceTemporarilyUnavailableError):
             raise PulseServiceTemporarilyUnavailableError(backoff, retry_time)
-        assert backoff.backoff_count == 2  # noqa: PLR2004
+        assert backoff.backoff_count == 2
         assert backoff.expiration_time == 0.0
 
     def test_pulse_authentication_error_inheritance(self):

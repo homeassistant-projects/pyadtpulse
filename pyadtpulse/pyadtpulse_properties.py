@@ -6,14 +6,14 @@ from warnings import warn
 
 from typeguard import typechecked
 
-from .const import (
-    ADT_DEFAULT_KEEPALIVE_INTERVAL,
-    ADT_DEFAULT_RELOGIN_INTERVAL,
-    ADT_MAX_KEEPALIVE_INTERVAL,
-    ADT_MIN_RELOGIN_INTERVAL,
-)
 from .site import ADTPulseSite
 from .util import set_debug_lock
+from .const import (
+    ADT_MIN_RELOGIN_INTERVAL,
+    ADT_MAX_KEEPALIVE_INTERVAL,
+    ADT_DEFAULT_RELOGIN_INTERVAL,
+    ADT_DEFAULT_KEEPALIVE_INTERVAL,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -22,11 +22,11 @@ class PyADTPulseProperties:
     """PyADTPulse Properties."""
 
     __slots__ = (
-        "_updates_exist",
+        "_keepalive_interval",
         "_pp_attribute_lock",
         "_relogin_interval",
-        "_keepalive_interval",
         "_site",
+        "_updates_exist",
     )
 
     @staticmethod

@@ -5,18 +5,18 @@ import datetime
 
 import pytest
 
+from tests.conftest import LoginType, add_signin
 from pyadtpulse.const import DEFAULT_API_HOST
 from pyadtpulse.exceptions import (
+    PulseMFARequiredError,
     PulseAccountLockedError,
     PulseAuthenticationError,
-    PulseMFARequiredError,
     PulseServerConnectionError,
 )
-from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProperties
 from pyadtpulse.pulse_connection import PulseConnection
-from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
 from pyadtpulse.pulse_connection_status import PulseConnectionStatus
-from tests.conftest import LoginType, add_signin
+from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
+from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProperties
 
 
 def setup_pulse_connection() -> PulseConnection:

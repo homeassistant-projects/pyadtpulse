@@ -1,10 +1,10 @@
 """ADT Pulse zone info."""
 
 import logging
+from typing import TypedDict
+from datetime import datetime
 from collections import UserDict
 from dataclasses import dataclass
-from datetime import datetime
-from typing import TypedDict
 
 from typeguard import typechecked
 

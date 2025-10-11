@@ -1,18 +1,18 @@
 """ADT Alarm Panel Dataclass."""
 
-import logging
 import re
-from asyncio import run_coroutine_threadsafe
-from dataclasses import dataclass
-from threading import RLock
+import logging
 from time import time
+from asyncio import run_coroutine_threadsafe
+from threading import RLock
+from dataclasses import dataclass
 
 from lxml import html
 from typeguard import typechecked
 
+from .util import make_etree
 from .const import ADT_ARM_DISARM_URI
 from .pulse_connection import PulseConnection
-from .util import make_etree
 
 LOG = logging.getLogger(__name__)
 ADT_ALARM_AWAY = "away"

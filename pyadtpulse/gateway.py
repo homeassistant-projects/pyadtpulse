@@ -1,17 +1,17 @@
 """ADT Pulse Gateway Dataclass."""
 
-import logging
 import re
-from dataclasses import dataclass
+import logging
+from typing import Any
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from threading import RLock
-from typing import Any
+from dataclasses import dataclass
 
 from typeguard import typechecked
 
+from .util import parse_pulse_datetime
 from .const import ADT_DEFAULT_POLL_INTERVAL, ADT_GATEWAY_MAX_OFFLINE_POLL_INTERVAL
 from .pulse_backoff import PulseBackoff
-from .util import parse_pulse_datetime
 
 LOG = logging.getLogger(__name__)
 
