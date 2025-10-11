@@ -62,6 +62,7 @@ module-root = ""
 line-length = 88 # Matches black
 show-fixes = true
 target-version = "py313"
+exclude = ["example-client.py"]
 
 [tool.ruff.format]
 docstring-code-format = true
