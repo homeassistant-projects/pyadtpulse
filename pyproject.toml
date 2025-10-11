@@ -1,10 +1,6 @@
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"
-<<<<<<< HEAD
-=======
-
->>>>>>> db6b0e8 (remove build dep. update build system to use uv_build)
 
 [project]
 name = "pyadtpulse"
@@ -52,46 +48,11 @@ dev = [
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 exclude = ["example-client.py"]
 
 [tool.uv]
 required-version = ">=0.8.0"
 
-=======
-=======
->>>>>>> b7ec926 (updated pyproject.toml with more ruff defaults and added import sorting)
-=======
-[tool.ruff]
-line-length = 88 # Matches black
-
-lint.select = [
-    "E",  # pycodestyle
-    "F",  # pyflakes
-    "I",  # isort
-    "B",  # flake8-bugbear
-    "C4", # flake8-comprehensions
-    "D",  # pydocstyle
-    "UP", # pyupgrade
-    "T",  # flake8-print
-    "PL", # pylint
-]
-lint.ignore = [
-    "D203", #no-blank-line-before-class
-    "D212", #multi-line-summary-first-line
-]
-
-=======
->>>>>>> 1db3095 (updated pyproject.toml with more ruff defaults and added import sorting)
-exclude = ["example-client.py"]
-
-[tool.uv]
-required-version = ">=0.8.0"
-
->>>>>>> 89d1a3f (remove build dep. update build system to use uv_build)
->>>>>>> 4db9371 (remove build dep. update build system to use uv_build)
 [tool.uv.build-backend]
 module-name = "pyadtpulse"
 module-root = ""
@@ -140,15 +101,3 @@ section-order = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
-
-
-
-
-<<<<<<< HEAD
-=======
-[tool.uv.build-backend]
-module-name = "pyadtpulse"
-module-root = ""
->>>>>>> db6b0e8 (remove build dep. update build system to use uv_build)
-=======
->>>>>>> b7ec926 (updated pyproject.toml with more ruff defaults and added import sorting)
