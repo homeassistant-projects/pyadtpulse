@@ -1,11 +1,40 @@
+## 1.2.12 (2025-10-14)
+# What's Changed
+* Bump freezegun from 1.5.3 to 1.5.5 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/56
+* Bump pre-commit from 4.2.0 to 4.3.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/55
+* Bump aiohttp from 3.12.14 to 3.12.15 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/54
+* Bump pytest-asyncio from 1.0.0 to 1.1.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/52
+* Bump ruff from 0.12.3 to 0.12.8 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/51
+* Bump build from 1.2.2.post1 to 1.3.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/53
+* Pypi publish fix by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/58
+* Bump ruff from 0.12.8 to 0.12.10 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/61
+* Bump lxml from 6.0.0 to 6.0.1 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/62
+* Bump ruff from 0.12.10 to 0.12.11 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/63
+* Bump pytest from 8.4.1 to 8.4.2 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/65
+* Bump ruff from 0.12.11 to 0.12.12 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/66
+* Bump pytest-mock from 3.14.1 to 3.15.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/67
+* Bump twine from 6.1.0 to 6.2.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/64
+* Bump pytest-isolate from 0.0.12 to 0.0.13 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/68
+* Bump ruff from 0.12.12 to 0.13.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/69
+* Bump pytest-asyncio from 1.1.0 to 1.2.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/70
+* Bump ruff from 0.13.0 to 0.13.3 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/75
+* Bump lxml from 6.0.1 to 6.0.2 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/72
+* Bump pytest-mock from 3.15.0 to 3.15.1 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/71
+* Ruff formatting, pre-commit, and validate workflow by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/50
+
+# New Contributors
+* @dependabot[bot] made their first contribution in https://github.com/homeassistant-projects/pyadtpulse/pull/56
+
+**Full Changelog**: https://github.com/homeassistant-projects/pyadtpulse/compare/1.2.11...1.2.12
+
 ## 1.2.11 (2025-07-12)
-## What's Changed
+# What's Changed
 * Refactor for uv by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/45
 * Update aiohttp zlib ng to aiohttp fast zlib zlib ng  by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/47
 * Workflow improvements by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/48
 * Unit test fixes/removals by @HeroesDieYoung in https://github.com/homeassistant-projects/pyadtpulse/pull/42
 
-## New Contributors
+# New Contributors
 * @EVWorth made their first contribution in https://github.com/homeassistant-projects/pyadtpulse/pull/45
 
 **Full Changelog**: https://github.com/homeassistant-projects/pyadtpulse/compare/1.2.10...1.2.11
