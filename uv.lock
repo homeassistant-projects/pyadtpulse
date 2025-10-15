@@ -767,7 +767,7 @@ wheels = [
 
 [[package]]
 name = "pyadtpulse"
-version = "1.2.11"
+version = "1.2.12"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
