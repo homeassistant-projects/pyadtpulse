@@ -422,10 +422,8 @@ class PyADTPulseAsync:
                     ex.args[0],
                 )
                 if (
-                    (log_level == logging.WARNING
-                    and self._sync_check_exception is None)
-                    or self._sync_check_exception != ex
-                ):
+                    log_level == logging.WARNING and self._sync_check_exception is None
+                ) or self._sync_check_exception != ex:
                     self._set_update_exception(ex)
                 continue
             # success, return

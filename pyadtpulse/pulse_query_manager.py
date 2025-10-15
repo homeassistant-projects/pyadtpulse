@@ -167,10 +167,8 @@ class PulseQueryManager:
                 str(e), self._connection_status.get_backoff()
             )
         if (
-            (isinstance(e, ClientConnectionError)
-            and "Connection refused" in str(e))
-            or ("timed out") in str(e)
-        ):
+            isinstance(e, ClientConnectionError) and "Connection refused" in str(e)
+        ) or ("timed out") in str(e):
             raise PulseServerConnectionError(
                 str(e), self._connection_status.get_backoff()
             )
