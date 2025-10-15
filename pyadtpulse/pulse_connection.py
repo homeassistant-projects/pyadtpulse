@@ -1,39 +1,40 @@
-"""ADT Pulse connection. End users should probably not call this directly.
+"""
+ADT Pulse connection. End users should probably not call this directly.
 
 This is the main interface to the http functions to access ADT Pulse.
 """
 
-import logging
 import re
-from asyncio import AbstractEventLoop
+import logging
 from time import time
+from asyncio import AbstractEventLoop
 
 from lxml import html
-from typeguard import typechecked
 from yarl import URL
+from typeguard import typechecked
 
+from .util import make_etree, set_debug_lock
 from .const import (
-    ADT_DEFAULT_LOGIN_TIMEOUT,
     ADT_LOGIN_URI,
     ADT_LOGOUT_URI,
-    ADT_MFA_FAIL_URI,
     ADT_SUMMARY_URI,
+    ADT_MFA_FAIL_URI,
+    ADT_DEFAULT_LOGIN_TIMEOUT,
 )
 from .exceptions import (
+    PulseMFARequiredError,
+    PulseNotLoggedInError,
     PulseAccountLockedError,
     PulseAuthenticationError,
     PulseClientConnectionError,
-    PulseMFARequiredError,
-    PulseNotLoggedInError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
 )
-from .pulse_authentication_properties import PulseAuthenticationProperties
 from .pulse_backoff import PulseBackoff
-from .pulse_connection_properties import PulseConnectionProperties
-from .pulse_connection_status import PulseConnectionStatus
 from .pulse_query_manager import PulseQueryManager
-from .util import make_etree, set_debug_lock
+from .pulse_connection_status import PulseConnectionStatus
+from .pulse_connection_properties import PulseConnectionProperties
+from .pulse_authentication_properties import PulseAuthenticationProperties
 
 LOG = logging.getLogger(__name__)
 
@@ -45,10 +46,10 @@ class PulseConnection(PulseQueryManager):
     """ADT Pulse connection related attributes."""
 
     __slots__ = (
-        "_pc_attribute_lock",
         "_authentication_properties",
         "_login_backoff",
         "_login_in_progress",
+        "_pc_attribute_lock",
     )
 
     @typechecked
@@ -60,7 +61,6 @@ class PulseConnection(PulseQueryManager):
         debug_locks: bool = False,
     ):
         """Initialize ADT Pulse connection."""
-
         # need to initialize this after the session since we set cookies
         # based on it
         super().__init__(
@@ -86,7 +86,8 @@ class PulseConnection(PulseQueryManager):
     def check_login_errors(
         self, response: tuple[int, str | None, URL | None]
     ) -> html.HtmlElement:
-        """Check response for login errors.
+        """
+        Check response for login errors.
 
         Will handle setting backoffs and raising exceptions.
 
@@ -102,6 +103,7 @@ class PulseConnection(PulseQueryManager):
             PulseAccountLockedError: if login fails due to account locked
             PulseMFARequiredError: if login fails due to MFA required
             PulseNotLoggedInError: if login fails due to not logged in
+
         """
 
         def extract_seconds_from_string(s: str) -> int:
@@ -113,15 +115,19 @@ class PulseConnection(PulseQueryManager):
                     seconds *= 60
             return seconds
 
-        def determine_error_type():
-            """Determine what type of error we have from the url and the parsed page.
+        def determine_error_type(tree: html.HtmlElement) -> None:
+            """
+            Determine what type of error we have from the url and the parsed page.
 
             Will raise the appropriate exception.
             """
             self._login_in_progress = False
             url = self._connection_properties.make_url(ADT_LOGIN_URI)
             if response_url_string.startswith(url):
-                error = tree.find(".//div[@id='warnMsgContents']")
+                error = tree.find(
+                    path=".//div[@id='warnMsgContents']",
+                    namespaces=None,
+                )
                 if error is not None:
                     error_text = error.text_content()
                     LOG.error("Error logging into pulse: %s", error_text)
@@ -160,7 +166,7 @@ class PulseConnection(PulseQueryManager):
         url = self._connection_properties.make_url(ADT_SUMMARY_URI)
         response_url_string = str(response[2])
         if url != response_url_string:
-            determine_error_type()
+            determine_error_type(tree=tree)
             # if we get here we can't determine the error
             # raise a generic authentication error
             LOG.error(
@@ -175,7 +181,7 @@ class PulseConnection(PulseQueryManager):
         self, timeout: int = ADT_DEFAULT_LOGIN_TIMEOUT
     ) -> html.HtmlElement | None:
         """
-        Performs a login query to the Pulse site.
+        Perform a login query to the Pulse site.
 
         Will backoff on login failures.
 
@@ -192,14 +198,14 @@ class PulseConnection(PulseQueryManager):
             ValueError: if login parameters are not correct
             PulseAuthenticationError: if login fails due to incorrect username/password
             PulseServerConnectionError: if login fails due to server error
-            PulseServiceTemporarilyUnavailableError: if login fails due to too many requests or
-                server is temporarily unavailable
+            PulseServiceTemporarilyUnavailableError: if login fails due to too many
+                requests or server is temporarily unavailable
             PulseAccountLockedError: if login fails due to account locked
             PulseMFARequiredError: if login fails due to MFA required
             PulseNotLoggedInError: if login fails due to not logged in
                 (which is probably an internal error)
-        """
 
+        """
         if self.login_in_progress:
             return None
         await self.quick_logout()
@@ -245,7 +251,7 @@ class PulseConnection(PulseQueryManager):
 
     @typechecked
     async def async_do_logout_query(self, site_id: str | None = None) -> None:
-        """Performs a logout query to the ADT Pulse site."""
+        """Perform a logout query to the ADT Pulse site."""
         params = {}
         si = ""
         self._connection_status.authenticated_flag.clear()
@@ -285,7 +291,7 @@ class PulseConnection(PulseQueryManager):
             return self._login_backoff
 
     def check_sync(self, message: str) -> AbstractEventLoop:
-        """Convenience method to check if running from sync context."""
+        """Check if run from sync context (Convenience method)."""
         return self._connection_properties.check_sync(message)
 
     @property
@@ -307,7 +313,8 @@ class PulseConnection(PulseQueryManager):
             self._login_in_progress = value
 
     async def quick_logout(self) -> None:
-        """Quickly logout.
+        """
+        Quickly logout.
 
         This just resets the authenticated flag and clears the ClientSession.
         """

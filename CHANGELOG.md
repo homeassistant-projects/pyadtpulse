@@ -1,3 +1,15 @@
+## 1.2.11 (2025-07-12)
+## What's Changed
+* Refactor for uv by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/45
+* Update aiohttp zlib ng to aiohttp fast zlib zlib ng  by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/47
+* Workflow improvements by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/48
+* Unit test fixes/removals by @HeroesDieYoung in https://github.com/homeassistant-projects/pyadtpulse/pull/42
+
+## New Contributors
+* @EVWorth made their first contribution in https://github.com/homeassistant-projects/pyadtpulse/pull/45
+
+**Full Changelog**: https://github.com/homeassistant-projects/pyadtpulse/compare/1.2.10...1.2.11
+
 ## 1.2.9 (2024-04-21)
 
 * ignore query string in check_login_errors().  This should fix a bug where the task was logged out

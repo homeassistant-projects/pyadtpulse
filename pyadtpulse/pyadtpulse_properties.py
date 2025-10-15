@@ -1,19 +1,19 @@
 """PyADTPulse Properties."""
 
-import logging
 import asyncio
+import logging
 from warnings import warn
 
 from typeguard import typechecked
 
-from .const import (
-    ADT_DEFAULT_KEEPALIVE_INTERVAL,
-    ADT_DEFAULT_RELOGIN_INTERVAL,
-    ADT_MAX_KEEPALIVE_INTERVAL,
-    ADT_MIN_RELOGIN_INTERVAL,
-)
 from .site import ADTPulseSite
 from .util import set_debug_lock
+from .const import (
+    ADT_MIN_RELOGIN_INTERVAL,
+    ADT_MAX_KEEPALIVE_INTERVAL,
+    ADT_DEFAULT_RELOGIN_INTERVAL,
+    ADT_DEFAULT_KEEPALIVE_INTERVAL,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -22,11 +22,11 @@ class PyADTPulseProperties:
     """PyADTPulse Properties."""
 
     __slots__ = (
-        "_updates_exist",
+        "_keepalive_interval",
         "_pp_attribute_lock",
         "_relogin_interval",
-        "_keepalive_interval",
         "_site",
+        "_updates_exist",
     )
 
     @staticmethod
@@ -54,11 +54,14 @@ class PyADTPulseProperties:
         relogin_interval: int = ADT_DEFAULT_RELOGIN_INTERVAL,
         debug_locks: bool = False,
     ) -> None:
-        """Create a PyADTPulse properties object.
+        """
+        Create a PyADTPulse properties object.
+
         Args:
-        pulse_authentication_properties (PulseAuthenticationProperties):
-            an instance of PulseAuthenticationProperties
-        pulse_connection_properties (PulseConnectionProperties):
+        keepalive_interval: (int):
+        relogin_interval: (int):
+        debug_locks: (bool): Enable debug locks. Defaults to False.
+
         """
         # FIXME use thread event/condition, regular condition?
         # defer initialization to make sure we have an event loop
@@ -75,11 +78,13 @@ class PyADTPulseProperties:
 
     @property
     def relogin_interval(self) -> int:
-        """Get re-login interval.
+        """
+        Get re-login interval.
 
         Returns:
             int: number of minutes to re-login to Pulse
                  0 means disabled
+
         """
         with self._pp_attribute_lock:
             return self._relogin_interval
@@ -87,7 +92,8 @@ class PyADTPulseProperties:
     @relogin_interval.setter
     @typechecked
     def relogin_interval(self, interval: int | None) -> None:
-        """Set re-login interval.
+        """
+        Set re-login interval.
 
         Args:
             interval (int|None): The number of minutes between logins.
@@ -96,6 +102,7 @@ class PyADTPulseProperties:
         Raises:
             ValueError: if a relogin interval of less than ADT_MIN_RELOGIN_INTERVAL
                         minutes is specified
+
         """
         if interval is None:
             interval = ADT_DEFAULT_RELOGIN_INTERVAL
@@ -107,10 +114,12 @@ class PyADTPulseProperties:
 
     @property
     def keepalive_interval(self) -> int:
-        """Get the keepalive interval in minutes.
+        """
+        Get the keepalive interval in minutes.
 
         Returns:
             int: the keepalive interval
+
         """
         with self._pp_attribute_lock:
             return self._keepalive_interval
@@ -118,15 +127,18 @@ class PyADTPulseProperties:
     @keepalive_interval.setter
     @typechecked
     def keepalive_interval(self, interval: int | None) -> None:
-        """Set the keepalive interval in minutes.
+        """
+        Set the keepalive interval in minutes.
 
         Args:
             interval (int|None): The number of minutes between keepalive calls
-                                 If set to None, resets to ADT_DEFAULT_KEEPALIVE_INTERVAL
+                If set to None, resets to ADT_DEFAULT_KEEPALIVE_INTERVAL
 
         Raises:
-            ValueError: if a keepalive interval of greater than ADT_MAX_KEEPALIVE_INTERVAL
-                        minutes is specified
+            ValueError:
+                if a keepalive interval of greater than
+                ADT_MAX_KEEPALIVE_INTERVAL minutes is specified
+
         """
         if interval is None:
             interval = ADT_DEFAULT_KEEPALIVE_INTERVAL
@@ -162,7 +174,7 @@ class PyADTPulseProperties:
             return self._site
 
     def set_update_status(self) -> None:
-        """Sets updates_exist to notify wait_for_update."""
+        """Set updates_exist to notify wait_for_update."""
         with self._pp_attribute_lock:
             self.updates_exist.set()
 

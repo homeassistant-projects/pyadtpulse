@@ -1,25 +1,25 @@
 """Module representing an ADT Pulse Site."""
 
-import logging
 import re
-from asyncio import Task, create_task, gather, get_event_loop, run_coroutine_threadsafe
-from datetime import datetime
+import logging
 from time import time
+from asyncio import Task, gather, create_task, get_event_loop, run_coroutine_threadsafe
+from datetime import datetime
 
 from lxml import html
 from typeguard import typechecked
 
-from .const import ADT_DEVICE_URI, ADT_GATEWAY_STRING, ADT_GATEWAY_URI, ADT_SYSTEM_URI
+from .util import make_etree, remove_prefix, parse_pulse_datetime
+from .const import ADT_DEVICE_URI, ADT_SYSTEM_URI, ADT_GATEWAY_URI, ADT_GATEWAY_STRING
+from .zones import ADTPulseZones, ADTPulseFlattendZone
 from .exceptions import (
-    PulseClientConnectionError,
     PulseGatewayOfflineError,
+    PulseClientConnectionError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
 )
-from .pulse_connection import PulseConnection
 from .site_properties import ADTPulseSiteProperties
-from .util import make_etree, parse_pulse_datetime, remove_prefix
-from .zones import ADTPulseFlattendZone, ADTPulseZones
+from .pulse_connection import PulseConnection
 
 LOG = logging.getLogger(__name__)
 
@@ -30,16 +30,18 @@ SECURITY_PANEL_NAME = "Security Panel"
 class ADTPulseSite(ADTPulseSiteProperties):
     """Represents an individual ADT Pulse site."""
 
-    __slots__ = ("_pulse_connection", "_trouble_zones", "_tripped_zones")
+    __slots__ = ("_pulse_connection", "_tripped_zones", "_trouble_zones")
 
     @typechecked
     def __init__(self, pulse_connection: PulseConnection, site_id: str, name: str):
-        """Initialize.
+        """
+        Initialize.
 
         Args:
             pulse_connection (PulseConnection): Pulse connection.
             site_id (str): Site ID.
             name (str): Site name.
+
         """
         self._pulse_connection = pulse_connection
         super().__init__(site_id, name, pulse_connection.debug_locks)
@@ -102,7 +104,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
 
     async def _get_device_attributes(self, device_id: str) -> dict[str, str] | None:
         """
-        Retrieves the attributes of a device.
+        Retrieve the attributes of a device.
 
         Args:
             device_id (str): The ID of the device to retrieve attributes for.
@@ -111,6 +113,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
             Optional[dict[str, str]]: A dictionary of attribute names and their
                 corresponding values,
                 or None if the device response lxml tree is None.
+
         """
         result: dict[str, str] = {}
         if device_id == ADT_GATEWAY_STRING:
@@ -131,7 +134,8 @@ class ADTPulseSite(ADTPulseSiteProperties):
         if device_response_etree is None:
             return None
         for dev_info_row in device_response_etree.findall(
-            ".//td[@class='InputFieldDescriptionL']"
+            path=".//td[@class='InputFieldDescriptionL']",
+            namespaces=None,
         ):
             identity_text = (
                 str(dev_info_row.text_content())
@@ -152,10 +156,11 @@ class ADTPulseSite(ADTPulseSiteProperties):
     @typechecked
     async def set_device(self, device_id: str) -> None:
         """
-        Sets the device attributes for the given device ID.
+        Set the device attributes for the given device ID.
 
         Args:
             device_id (str): The ID of the device.
+
         """
         dev_attr = await self._get_device_attributes(device_id)
         if dev_attr is None:
@@ -174,23 +179,24 @@ class ADTPulseSite(ADTPulseSiteProperties):
     @typechecked
     async def fetch_devices(self, tree: html.HtmlElement | None) -> bool:
         """
-        Fetches the devices from the given lxml etree and updates
-        the zone attributes.
+        Fetch the devices from the tree and update the zone attributes.
 
         Args:
-            tree (Optional[html.HtmlElement]): The lxml etree containing
+            tree: (Optional[html.HtmlElement]): The lxml etree containing
                 the devices.
 
         Returns:
             bool: True if the devices were fetched and zone attributes were updated
                 successfully, False otherwise.
+
         """
         regex_device = r"goToUrl\('device.jsp\?id=(\d*)'\);"
         task_list: list[Task] = []
         zone_id: str | None = None
 
         def add_zone_from_row(row_tds: list[html.HtmlElement]) -> str | None:
-            """Adds a zone from an HtmlElement row.
+            """
+            Add a zone from an HtmlElement row.
 
             Returns None if successful, otherwise the zone ID if present.
             """
@@ -200,7 +206,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
                 zone_id = row_tds[2].text_content().strip()
                 zone_type: str = row_tds[4].text_content().strip()
                 zone_status = "Unknown"
-                zs_temp = row_tds[0].find("canvas")
+                zs_temp = row_tds[0].find(
+                    path="canvas",
+                    namespaces=None,
+                )
                 if (
                     zs_temp is not None
                     and zs_temp.get("title") is not None
@@ -252,7 +261,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
             if tree is None:
                 return False
         with self._site_lock:
-            for row in tree.findall(".//tr[@class='p_listRow'][@onclick]"):
+            for row in tree.findall(
+                path=".//tr[@class='p_listRow'][@onclick]",
+                namespaces=None,
+            ):
                 tmp_device_name = row.find(".//a")
                 if tmp_device_name is None:
                     LOG.debug("Skipping device as it has no name")
@@ -290,7 +302,8 @@ class ADTPulseSite(ADTPulseSiteProperties):
     async def _async_update_zones_as_dict(
         self, tree: html.HtmlElement | None
     ) -> ADTPulseZones | None:
-        """Update zone status information asynchronously.
+        """
+        Update zone status information asynchronously.
 
         Returns:
             ADTPulseZones: a dictionary of zones with status
@@ -298,6 +311,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
 
         Raises:
             PulseGatewayOffline: If the gateway is offline.
+
         """
         with self._site_lock:
             if self._zones is None:
@@ -324,9 +338,9 @@ class ADTPulseSite(ADTPulseSiteProperties):
             self.update_zone_from_etree(tree)
         return self._zones
 
-    def update_zone_from_etree(self, tree: html.HtmlElement) -> set[int]:
+    def update_zone_from_etree(self, tree: html.HtmlElement) -> set[int]:  # noqa: PLR0912, PLR0915
         """
-        Updates the zone information based on the provided lxml etree.
+        Update the zone information based on the provided lxml etree.
 
         Args:
             tree:html.HtmlElement: the parsed response tree
@@ -336,6 +350,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
 
         Raises:
             PulseGatewayOffline: If the gateway is offline.
+
         """
 
         def get_zone_id(zone_row: html.HtmlElement) -> int | None:
@@ -343,7 +358,8 @@ class ADTPulseSite(ADTPulseSiteProperties):
                 zone = int(
                     remove_prefix(
                         zone_row.find(
-                            ".//div[@class='p_grayNormalText']"
+                            path=".//div[@class='p_grayNormalText']",
+                            namespaces=None,
                         ).text_content(),
                         "Zone",
                     )
@@ -360,7 +376,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
             try:
                 last_update = parse_pulse_datetime(
                     remove_prefix(
-                        zone_row.find(".//span[@class='devStatIcon']").get("title"),
+                        zone_row.find(
+                            path=".//span[@class='devStatIcon']",
+                            namespaces=None,
+                        ).get("title"),
                         "Last Event:",
                     )
                 )
@@ -375,7 +394,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
         def get_zone_state(zone_row: html.HtmlElement, zone: int) -> str:
             try:
                 state = remove_prefix(
-                    zone_row.find(".//canvas[@class='p_ic_icon_device']").get("icon"),
+                    zone_row.find(
+                        path=".//canvas[@class='p_ic_icon_device']",
+                        namespaces=None,
+                    ).get("icon"),
                     "devStat",
                 )
             except (AttributeError, ValueError):
@@ -386,7 +408,12 @@ class ADTPulseSite(ADTPulseSiteProperties):
         def get_zone_status(zone_row: html.HtmlElement, zone: int) -> str:
             try:
                 status = (
-                    zone_row.find(".//td[@class='p_listRow']").getnext().text_content()
+                    zone_row.find(
+                        path=".//td[@class='p_listRow']",
+                        namespaces=None,
+                    )
+                    .getnext()
+                    .text_content()
                 )
                 status = status.replace("\xa0", "")
                 if status.startswith("Trouble"):
@@ -442,7 +469,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
         # parse ADT's convulated html to get sensor status
         with self._site_lock:
             try:
-                orb_status = tree.find(".//canvas[@id='ic_orb']").get("orb")
+                orb_status = tree.find(
+                    path=".//canvas[@id='ic_orb']",
+                    namespaces=None,
+                ).get("orb")
                 if orb_status == "offline":
                     self.gateway.is_online = False
                     raise PulseGatewayOfflineError(self.gateway.backoff)
@@ -458,7 +488,10 @@ class ADTPulseSite(ADTPulseSiteProperties):
                 self._trouble_zones = set()
             original_non_default_zones = self._trouble_zones | self._tripped_zones
             # v26 and lower: temp = row.find("span", {"class": "p_grayNormalText"})
-            for row in tree.findall(".//tr[@class='p_listRow']"):
+            for row in tree.findall(
+                path=".//tr[@class='p_listRow']",
+                namespaces=None,
+            ):
                 zone_id = get_zone_id(row)
                 if not zone_id:
                     continue
@@ -478,7 +511,8 @@ class ADTPulseSite(ADTPulseSiteProperties):
                         self._trouble_zones.remove(zone_id)
                     update_zone_from_row(zone_id, state, status, last_update)
                     continue
-                # everything here is OK, so we just need to check if anything in tripped or trouble states have
+                # everything here is OK, so we just need to check if
+                #   anything in tripped or trouble states have
                 # returned to normal
                 if first_pass:
                     update_zone_from_row(zone_id, state, status, last_update)
@@ -499,12 +533,14 @@ class ADTPulseSite(ADTPulseSiteProperties):
         return retval
 
     async def _async_update_zones(self) -> list[ADTPulseFlattendZone] | None:
-        """Update zones asynchronously.
+        """
+        Update zones asynchronously.
 
         Returns:
             List[ADTPulseFlattendZone]: a list of zones with their status
 
             None on error
+
         """
         with self._site_lock:
             if not self._zones:
@@ -515,10 +551,12 @@ class ADTPulseSite(ADTPulseSiteProperties):
             return zonelist.flatten()
 
     def update_zones(self) -> list[ADTPulseFlattendZone] | None:
-        """Update zone status information.
+        """
+        Update zone status information.
 
         Returns:
             Optional[List[ADTPulseFlattendZone]]: a list of zones with status
+
         """
         coro = self._async_update_zones()
         return run_coroutine_threadsafe(coro, get_event_loop()).result()

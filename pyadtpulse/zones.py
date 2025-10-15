@@ -1,10 +1,10 @@
 """ADT Pulse zone info."""
 
 import logging
+from typing import TypedDict
+from datetime import datetime
 from collections import UserDict
 from dataclasses import dataclass
-from datetime import datetime
-from typing import TypedDict
 
 from typeguard import typechecked
 
@@ -26,7 +26,8 @@ LOG = logging.getLogger(__name__)
 
 @dataclass(slots=True)
 class ADTPulseZoneData:
-    """Data for an ADT Pulse zone.
+    """
+    Data for an ADT Pulse zone.
 
     Fields:
         name (str): the zone name
@@ -72,7 +73,8 @@ class ADTPulseZoneData:
 
 
 class ADTPulseFlattendZone(TypedDict):
-    """Represent ADTPulseZones as a "flattened" dictionary.
+    """
+    Represent ADTPulseZones as a "flattened" dictionary.
 
     Fields:
         zone (int): the zone id
@@ -107,13 +109,15 @@ class ADTPulseZones(UserDict):
             raise ValueError("ADT Pulse Zone must be an integer")
 
     def __getitem__(self, key: int) -> ADTPulseZoneData:
-        """Get a Zone.
+        """
+        Get a Zone.
 
         Args:
             key (int): zone id
 
         Returns:
             ADTPulseZoneData: zone data
+
         """
         return super().__getitem__(key)
 
@@ -124,12 +128,14 @@ class ADTPulseZones(UserDict):
         return result
 
     def __setitem__(self, key: int, value: ADTPulseZoneData) -> None:
-        """Validate types and sets defaults for ADTPulseZones.
+        """
+        Validate types and sets defaults for ADTPulseZones.
 
         ADTPulseZoneData.id_ and name will be set to generic defaults if not set
 
         Raises:
             ValueError: if key is not an int or value is not ADTPulseZoneData
+
         """
         self._check_key(key)
         self._check_value(value)
@@ -141,26 +147,27 @@ class ADTPulseZones(UserDict):
 
     @typechecked
     def update_status(self, key: int, status: str) -> None:
-        (
-            """Update zone status.
+        """
+        Update zone status.
 
         Args:
             key (int): zone id to change
             status (str): status to set
+
         """
-            """"""
-        )
         temp = self._get_zonedata(key)
         temp.status = status
         self.__setitem__(key, temp)
 
     @typechecked
     def update_state(self, key: int, state: str) -> None:
-        """Update zone state.
+        """
+        Update zone state.
 
         Args:
             key (int): zone id to change
             state (str): state to set
+
         """
         temp = self._get_zonedata(key)
         temp.state = state
@@ -168,11 +175,13 @@ class ADTPulseZones(UserDict):
 
     @typechecked
     def update_last_activity_timestamp(self, key: int, dt: datetime) -> None:
-        """Update timestamp.
+        """
+        Update timestamp.
 
         Args:
             key (int): zone id to change
             dt (datetime): timestamp to set
+
         """
         temp = self._get_zonedata(key)
         temp.last_activity_timestamp = int(dt.timestamp())
@@ -184,9 +193,10 @@ class ADTPulseZones(UserDict):
         key: int,
         state: str,
         status: str = "Online",
-        last_activity: datetime = datetime.now(),
+        last_activity: datetime | None = None,
     ) -> None:
-        """Update the device info.
+        """
+        Update the device info.
 
         Convenience method to update all common device info
         at once.
@@ -194,21 +204,28 @@ class ADTPulseZones(UserDict):
         Args:
             key (int): zone id
             state (str): state
-            status (str, optional): status. Defaults to "Online".
-            last_activity (datetime, optional): last_activity_datetime.
-                Defaults to datetime.now().
+            status (str, optional): The status of the device. Defaults to "Online".
+            last_activity (datetime | None, optional):
+                The timestamp of last activity.
+                Defaults to None, replaced with the current datetime.
+
+
         """
         temp = self._get_zonedata(key)
         temp.state = state
         temp.status = status
+        if last_activity is None:
+            last_activity = datetime.now()
         temp.last_activity_timestamp = int(last_activity.timestamp())
         self.__setitem__(key, temp)
 
     def flatten(self) -> list[ADTPulseFlattendZone]:
-        """Flattens ADTPulseZones into a list of ADTPulseFlattenedZones.
+        """
+        Flattens ADTPulseZones into a list of ADTPulseFlattenedZones.
 
         Returns:
             List[ADTPulseFlattendZone]
+
         """
         result: list[ADTPulseFlattendZone] = []
         for k, i in self.items():

@@ -3,17 +3,17 @@
 import os
 import re
 import sys
-from collections.abc import Generator
-from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, patch
 from urllib import parse
+from pathlib import Path
+from datetime import datetime
+from unittest.mock import AsyncMock, patch
+from collections.abc import Generator
 
-import freezegun
 import pytest
-from aiohttp import client_exceptions, web
+import freezegun
+from aiohttp import web, client_exceptions
 from aioresponses import aioresponses
 
 # Get the root directory of your project
@@ -25,21 +25,21 @@ test_file_dir = project_root / "data_files"
 # pylint: disable=wrong-import-position
 # ruff: noqa: E402
 # flake8: noqa: E402
+from pyadtpulse.util import remove_prefix
 from pyadtpulse.const import (
-    ADT_DEVICE_URI,
-    ADT_GATEWAY_URI,
-    ADT_LOGIN_URI,
-    ADT_LOGOUT_URI,
-    ADT_MFA_FAIL_URI,
     ADT_ORB_URI,
+    ADT_LOGIN_URI,
+    ADT_DEVICE_URI,
+    ADT_LOGOUT_URI,
+    ADT_SYSTEM_URI,
+    ADT_GATEWAY_URI,
     ADT_SUMMARY_URI,
+    ADT_MFA_FAIL_URI,
+    DEFAULT_API_HOST,
     ADT_SYNC_CHECK_URI,
     ADT_SYSTEM_SETTINGS,
-    ADT_SYSTEM_URI,
-    DEFAULT_API_HOST,
 )
 from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
-from pyadtpulse.util import remove_prefix
 
 MOCKED_API_VERSION = "27.0.0-140"
 
@@ -56,10 +56,12 @@ class LoginType(Enum):
 
 @pytest.fixture
 def read_file():
-    """Fixture to read a file.
+    """
+    Fixture to read a file.
 
     Args:
         file_name (str): Name of the file to read
+
     """
 
     def _read_file(file_name: str) -> str:
@@ -149,6 +151,8 @@ def get_mocked_url(get_mocked_connection_properties):
 
 @pytest.fixture
 def get_relative_mocked_url(get_mocked_connection_properties):
+    """Fixture to get the test relative url."""
+
     def _get_relative_mocked_url(path: str) -> str:
         return remove_prefix(
             get_mocked_connection_properties.make_url(path), DEFAULT_API_HOST
@@ -186,7 +190,7 @@ def mocked_server_responses(
     read_file,
     get_mocked_url,
     extract_ids_from_data_directory: list[str],
-) -> Generator[aioresponses, Any, None]:
+) -> Generator[aioresponses, Any]:
     """Fixture to get the test mapped responses."""
     static_responses = get_mocked_mapped_static_responses
     with aioresponses() as responses:
@@ -252,6 +256,7 @@ def add_custom_response(
     file_name: str | None = None,
     headers: dict[str, Any] | None = None,
 ):
+    """Add a custom response to the mocked server."""
     if method.upper() not in ("GET", "POST"):
         raise ValueError("Unsupported HTTP method. Only GET and POST are supported.")
 
@@ -268,6 +273,7 @@ def add_custom_response(
 def add_signin(
     signin_type: LoginType, mocked_server_responses, get_mocked_url, read_file
 ):
+    """Add a signin response to the mocked server."""
     if signin_type != LoginType.SUCCESS:
         add_custom_response(
             mocked_server_responses,
@@ -291,6 +297,7 @@ def add_signin(
 
 
 def add_logout(mocked_server_responses, get_mocked_url, read_file):
+    """Add a logout response to the mocked server."""
     add_custom_response(
         mocked_server_responses,
         read_file,
@@ -336,8 +343,8 @@ class PulseMockedWebServer:
     def _make_local_prefix(self, uri: str) -> str:
         return remove_prefix(self.pcp.make_url(uri), "https://")
 
-    async def handler(self, request: web.Request) -> web.Response | web.FileResponse:
-        """Handler for the PulseMockedWebServer."""
+    async def handler(self, request: web.Request) -> web.Response | web.FileResponse:  # noqa: PLR0911
+        """Define a handler for the PulseMockedWebServer."""
         path = request.path
 
         # Check if there is a query parameter for retry_after

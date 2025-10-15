@@ -7,11 +7,8 @@ import pytest
 from pyadtpulse.pulse_backoff import PulseBackoff
 
 
-# Test that the PulseBackoff class can be initialized with valid parameters.
 def test_initialize_backoff_valid_parameters():
-    """
-    Test that the PulseBackoff class can be initialized with valid parameters.
-    """
+    """Test that the PulseBackoff class can be initialized with valid parameters."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -41,10 +38,13 @@ def test_initialize_backoff_valid_parameters():
     assert backoff._expiration_time == 0.0
 
 
-# Get current backoff interval
 def test_get_current_backoff_interval():
     """
-    Test that the get_current_backoff_interval method returns the correct current backoff interval.
+    Test the get_current_backoff_interval.
+
+    Test that the get_current_backoff_interval method
+    returns the correct current backoff interval.
+
     """
     # Arrange
     name = "test_backoff"
@@ -74,11 +74,8 @@ def test_get_current_backoff_interval():
     assert current_backoff_interval == initial_backoff_interval * 2
 
 
-# Increment backoff
 def test_increment_backoff():
-    """
-    Test that the increment_backoff method increments the backoff count.
-    """
+    """Test that the increment_backoff method increments the backoff count."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -104,11 +101,8 @@ def test_increment_backoff():
     assert backoff._backoff_count == 2
 
 
-# Reset backoff
 def test_reset_backoff():
-    """
-    Test that the reset_backoff method resets the backoff count and expiration time.
-    """
+    """Test that reset_backoff resets the backoff count and expiration time."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -133,12 +127,9 @@ def test_reset_backoff():
     assert backoff._backoff_count == 0
 
 
-# Test that the wait_for_backoff method waits for the correct amount of time.
 @pytest.mark.asyncio
 async def test_wait_for_backoff2(mock_sleep):
-    """
-    Test that the wait_for_backoff method waits for the correct amount of time.
-    """
+    """Test that the wait_for_backoff method waits for the correct amount of time."""
     # Arrange
 
     name = "test_backoff"
@@ -164,11 +155,8 @@ async def test_wait_for_backoff2(mock_sleep):
     assert mock_sleep.await_args[0][0] == pytest.approx(initial_backoff_interval)
 
 
-# Check if backoff is needed
 def test_will_backoff():
-    """
-    Test that the will_backoff method returns True if backoff is needed, False otherwise.
-    """
+    """Test that will_backoff returns True if backoff is needed, False otherwise."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -192,11 +180,13 @@ def test_will_backoff():
     assert backoff.will_backoff()
 
 
-# Initialize backoff with invalid initial_backoff_interval
 def test_initialize_backoff_invalid_initial_interval():
     """
-    Test that initializing the PulseBackoff class with an invalid
+    PulseBackoff testing.
+
+    Test that initializing PulseBackoff with an invalid
     initial_backoff_interval raises a ValueError.
+
     """
     # Arrange
     name = "test_backoff"
@@ -218,11 +208,13 @@ def test_initialize_backoff_invalid_initial_interval():
         )
 
 
-# Initialize backoff with invalid max_backoff_interval
 def test_initialize_backoff_invalid_max_interval():
     """
+    PulseBackoff testing.
+
     Test that initializing the PulseBackoff class with an invalid
     max_backoff_interval raises a ValueError.
+
     """
     # Arrange
     name = "test_backoff"
@@ -244,10 +236,13 @@ def test_initialize_backoff_invalid_max_interval():
         )
 
 
-# Test that setting the absolute backoff time with an invalid backoff_time raises a ValueError.
 def test_set_absolute_backoff_time_invalid_time():
     """
-    Test that setting the absolute backoff time with an invalid backoff_time raises a ValueError.
+    Absolute backoff testing.
+
+    Test that setting the absolute backoff time
+    with an invalid backoff_time raises a ValueError.
+
     """
     # Arrange
     backoff = PulseBackoff(
@@ -267,9 +262,7 @@ def test_set_absolute_backoff_time_invalid_time():
 
 
 def test_set_absolute_backoff_time_valid_time():
-    """
-    Test that setting the absolute backoff time with a valid backoff_time works.
-    """
+    """Test that setting the absolute backoff time with a valid backoff_time works."""
     # Arrange
     backoff = PulseBackoff(
         name="test_backoff",
@@ -286,11 +279,8 @@ def test_set_absolute_backoff_time_valid_time():
     assert backoff._expiration_time == backoff_time
 
 
-# Initialize backoff with valid parameters
 def test_initialize_backoff_valid_parameters2():
-    """
-    Test that the PulseBackoff class can be initialized with valid parameters.
-    """
+    """Test that the PulseBackoff class can be initialized with valid parameters."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -317,11 +307,13 @@ def test_initialize_backoff_valid_parameters2():
     assert backoff._expiration_time == 0.0
 
 
-# Increment backoff
 def test_increment_backoff2():
     """
+    Increment backoff test.
+
     Test that the backoff count is incremented correctly when calling the
     increment_backoff method.
+
     """
     # Arrange
     name = "test_backoff"
@@ -346,9 +338,10 @@ def test_increment_backoff2():
     assert backoff.backoff_count == 1
 
 
-# Reset backoff
 def test_reset_backoff2():
     """
+    Reset backoff test.
+
     Test that the backoff count and expiration time are not reset when calling
     the reset_backoff method where expiration time is in the future.
     """
@@ -380,9 +373,10 @@ def test_reset_backoff2():
     assert backoff.expiration_time == now + 10.0
 
 
-# Check if backoff is needed
 def test_backoff_needed():
     """
+    Backoff needed test.
+
     Test that the 'will_backoff' method returns the correct value when
     backoff is needed.
     """
@@ -413,9 +407,7 @@ def test_backoff_needed():
 # Wait for backoff
 @pytest.mark.asyncio
 async def test_wait_for_backoff(mocker):
-    """
-    Test that the wait_for_backoff method waits for the correct amount of time.
-    """
+    """Test that the wait_for_backoff method waits for the correct amount of time."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -448,9 +440,7 @@ async def test_wait_for_backoff(mocker):
 
 # Set initial backoff interval
 def test_set_initial_backoff_interval():
-    """
-    Test that the initial backoff interval can be set.
-    """
+    """Test that the initial backoff interval can be set."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -475,9 +465,10 @@ def test_set_initial_backoff_interval():
     assert backoff.initial_backoff_interval == new_interval
 
 
-# Initialize backoff with invalid max_backoff_interval
 def test_initialize_backoff_invalid_max_interval2():
     """
+    PulseBackoff invalid test.
+
     Test that the PulseBackoff class raises a ValueError when initialized
     with an invalid max_backoff_interval.
     """
@@ -503,6 +494,8 @@ def test_initialize_backoff_invalid_max_interval2():
 
 def test_initialize_backoff_invalid_initial_interval2():
     """
+    PulseBackoff invalid test.
+
     Test that the PulseBackoff class raises a ValueError when initialized with an
     invalid initial_backoff_interval.
     """
@@ -526,11 +519,8 @@ def test_initialize_backoff_invalid_initial_interval2():
         )
 
 
-# Set absolute backoff time with invalid backoff_time
 def test_set_absolute_backoff_time_invalid_backoff_time():
-    """
-    Test that set_absolute_backoff_time raises a ValueError when given an invalid backoff_time.
-    """
+    """Test set_absolute_backoff_time raises ValueError with invalid backoff_time."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -553,12 +543,9 @@ def test_set_absolute_backoff_time_invalid_backoff_time():
         backoff.set_absolute_backoff_time(invalid_backoff_time)
 
 
-# Wait for backoff with negative diff
 @pytest.mark.asyncio
 async def test_wait_for_backoff_with_negative_diff(mocker):
-    """
-    Test that the wait_for_backoff method handles a negative diff correctly.
-    """
+    """Test that the wait_for_backoff method handles a negative diff correctly."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -588,9 +575,10 @@ async def test_wait_for_backoff_with_negative_diff(mocker):
     assert backoff._expiration_time >= initial_backoff_interval
 
 
-# Calculate backoff interval with backoff_count <= threshold
 def test_calculate_backoff_interval_with_backoff_count_less_than_threshold():
     """
+    Calculate backoff interval with backoff_count <= threshold.
+
     Test that the calculate_backoff_interval method returns 0
     when the backoff count is less than or equal to the threshold.
     """
@@ -615,10 +603,11 @@ def test_calculate_backoff_interval_with_backoff_count_less_than_threshold():
     assert backoff._calculate_backoff_interval() == 0.0
 
 
-# Calculate backoff interval with backoff_count > threshold and exceeds max_backoff_interval
 @pytest.mark.asyncio
-async def test_calculate_backoff_interval_exceeds_max(mocker):
+async def test_calculate_backoff_interval_exceeds_max(mocker):  # noqa: PLR0915
     """
+    # Calculate backoff interval with backoff_count.
+
     Test that the calculate_backoff_interval method returns the correct backoff interval
     when backoff_count is greater than threshold and exceeds max_backoff_interval.
     """
@@ -707,9 +696,7 @@ async def test_calculate_backoff_interval_exceeds_max(mocker):
 
 # Increment backoff and update expiration_time
 def test_increment_backoff_and_update_expiration_time():
-    """
-    Test that the backoff count is incremented
-    """
+    """Test that the backoff count is incremented."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -746,11 +733,8 @@ def test_increment_backoff_and_update_expiration_time():
     assert backoff.backoff_count == 1
 
 
-# Calculate backoff interval with backoff_count > threshold
 def test_calculate_backoff_interval_with_backoff_count_greater_than_threshold():
-    """
-    Test the calculation of backoff interval when backoff_count is greater than threshold.
-    """
+    """Test backoff interval when backoff_count greater than threshold."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -778,14 +762,11 @@ def test_calculate_backoff_interval_with_backoff_count_greater_than_threshold():
     assert calculated_interval == min(expected_interval, max_backoff_interval)
 
 
-# Test that calling increment backoff 4 times followed by wait for backoff
-# will sleep for 8 seconds with an initial backoff of 1, max backoff of 10.
-# And that an additional call to increment backoff followed by a wait for backoff will wait for 10.
-
-
 @pytest.mark.asyncio
 async def test_increment_backoff_and_wait_for_backoff(mock_sleep):
     """
+    Increment backoff test.
+
     Test that calling increment backoff 4 times followed by wait for backoff will
     sleep for 8 seconds with an initial backoff of 1, max backoff of 10.
     And that an additional call to increment backoff followed by a wait
@@ -846,9 +827,7 @@ async def test_increment_backoff_and_wait_for_backoff(mock_sleep):
 
 @pytest.mark.asyncio
 async def test_absolute_backoff_time(mock_sleep, freeze_time_to_now):
-    """
-    Test that the absolute backoff time is calculated correctly.
-    """
+    """Test that the absolute backoff time is calculated correctly."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0

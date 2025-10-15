@@ -1,12 +1,12 @@
 """Utility functions for pyadtpulse."""
 
-import logging
-import string
 import sys
+import string
+import logging
 from base64 import urlsafe_b64encode
-from datetime import datetime, timedelta
-from pathlib import Path
 from random import randint
+from pathlib import Path
+from datetime import datetime, timedelta
 from threading import RLock, current_thread
 
 from lxml import html
@@ -16,7 +16,8 @@ LOG = logging.getLogger(__name__)
 
 
 def remove_prefix(text: str, prefix: str) -> str:
-    """Remove prefix from a string.
+    """
+    Remove prefix from a string.
 
     Args:
         text (str): original text
@@ -24,20 +25,24 @@ def remove_prefix(text: str, prefix: str) -> str:
 
     Returns:
         str: modified string
+
     """
     return text[text.startswith(prefix) and len(prefix) :]
 
 
 def handle_response(code: int, url: URL | None, level: int, error_message: str) -> bool:
-    """Handle the response from query().
+    """
+    Handle the response from query().
 
     Args:
-        code (int): the return code
-        level (int): Level to log on error (i.e. INFO, DEBUG)
-        error_message (str): the error message
+        code: (int): the return code
+        url: (Optional[URL]): the URL that was queried
+        level: (int): Level to log on error (i.e. INFO, DEBUG)
+        error_message: (str): the error message
 
     Returns:
         bool: True if no error occurred.
+
     """
     if code >= 400:
         LOG.log(level, "%s: error code = %s from %s", error_message, code, url)
@@ -52,16 +57,19 @@ def make_etree(
     level: int,
     error_message: str,
 ) -> html.HtmlElement | None:
-    """Make a parsed HTML tree from a Response using lxml.
+    """
+    Make a parsed HTML tree from a Response using lxml.
 
     Args:
-        code (int): the return code
-        response_text (Optional[str]): the response text
-        level (int): the logging level on error
-        error_message (str): the error message
+        code: (int): the return code
+        response_text: (Optional[str]): the response text
+        url: (Optional[URL]): the URL that was queried
+        level: (int): the logging level on error
+        error_message: (str): the error message
 
     Returns:
         Optional[html.HtmlElement]: a parsed HTML tree, or None on failure
+
     """
     if not handle_response(code, url, level, error_message):
         return None
@@ -77,10 +85,12 @@ FINGERPRINT_RANGE_LEN = len(ALLOWABLE_CHARACTERS)
 
 
 def generate_random_fingerprint() -> str:
-    """Generate a random browser fingerprint string.
+    """
+    Generate a random browser fingerprint string.
 
     Returns:
         str: a fingerprint string
+
     """
     fingerprint = [
         ALLOWABLE_CHARACTERS[(randint(0, FINGERPRINT_RANGE_LEN - 1))]
@@ -90,13 +100,15 @@ def generate_random_fingerprint() -> str:
 
 
 def generate_fingerprint_from_browser_json(filename: str) -> str:
-    """Generate a browser fingerprint from a JSON file.
+    """
+    Generate a browser fingerprint from a JSON file.
 
     Args:
         filename (str): JSON file containing fingerprint information
 
     Returns:
         str: the fingerprint
+
     """
     data = Path(filename).read_text(encoding="utf-8")
     # Pulse just calls JSON.Stringify() and btoa() in javascript, so we need to
@@ -114,7 +126,8 @@ class DebugRLock:
         self._lock_name = name
 
     def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
-        """Acquire the lock.
+        """
+        Acquire the lock.
 
         Args:
             blocking (bool, optional): blocks if can't obtain the lock if True.
@@ -125,6 +138,7 @@ class DebugRLock:
         Returns:
             bool: True if lock obtained, False if blocking is False and lock couldn't be
                   obtained
+
         """
         caller = sys._getframe().f_back
         thread_name = current_thread().name
@@ -176,12 +190,14 @@ class DebugRLock:
         )
 
     def __exit__(self, t, v, b):
-        """Automatically release lock on exit.
+        """
+        Automatically release lock on exit.
 
         Args:
             t (_type_): _description_
             v (_type_): _description_
             b (_type_): _description_
+
         """
         caller = sys._getframe().f_back
         if caller is not None:
@@ -200,7 +216,8 @@ class DebugRLock:
 
 
 def parse_pulse_datetime(datestring: str) -> datetime:
-    """Parse pulse date strings.
+    """
+    Parse pulse date strings.
 
     Args:
         datestring (str): the string to parse
@@ -211,6 +228,7 @@ def parse_pulse_datetime(datestring: str) -> datetime:
 
     Returns:
         datetime: time value of given string
+
     """
     datestring = datestring.replace("\xa0", " ").rstrip()
     split_string = [s for s in datestring.split(" ") if s.strip()]
@@ -234,7 +252,8 @@ def parse_pulse_datetime(datestring: str) -> datetime:
 
 
 def set_debug_lock(debug_lock: bool, name: str) -> "RLock | DebugRLock":
-    """Set lock or debug lock
+    """
+    Set lock or debug lock.
 
     Args:
         debug_lock (bool): set a debug lock
@@ -242,6 +261,7 @@ def set_debug_lock(debug_lock: bool, name: str) -> "RLock | DebugRLock":
 
     Returns:
         RLock | DebugRLock: lock object to return
+
     """
     if debug_lock:
         return DebugRLock(name)

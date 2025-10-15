@@ -2,13 +2,13 @@
 
 import asyncio
 import datetime
-from logging import getLogger
 from time import time
+from logging import getLogger
 
 from typeguard import typechecked
 
-from .const import ADT_MAX_BACKOFF
 from .util import set_debug_lock
+from .const import ADT_MAX_BACKOFF
 
 LOG = getLogger(__name__)
 
@@ -18,12 +18,12 @@ class PulseBackoff:
 
     __slots__ = (
         "_b_lock",
+        "_backoff_count",
+        "_detailed_debug_logging",
+        "_expiration_time",
         "_initial_backoff_interval",
         "_max_backoff_interval",
-        "_backoff_count",
-        "_expiration_time",
         "_name",
-        "_detailed_debug_logging",
         "_threshold",
     )
 
@@ -37,7 +37,8 @@ class PulseBackoff:
         debug_locks: bool = False,
         detailed_debug_logging=False,
     ) -> None:
-        """Initialize backoff.
+        """
+        Initialize backoff.
 
         Args:
             name (str): Name of the backoff.
@@ -48,6 +49,7 @@ class PulseBackoff:
             debug_locks (bool, optional): Enable debug locks. Defaults to False.
             detailed_debug_logging (bool, optional): Enable detailed debug logging.
                 Defaults to False.
+
         """
         self._check_intervals(initial_backoff_interval, max_backoff_interval)
         self._b_lock = set_debug_lock(debug_locks, "pyadtpulse._b_lock")
@@ -75,8 +77,13 @@ class PulseBackoff:
     def _check_intervals(
         initial_backoff_interval: float, max_backoff_interval: float
     ) -> None:
-        """Check max_backoff_interval is >= initial_backoff_interval
-        and that both invervals are positive."""
+        """
+        Check backoff intervals.
+
+        Check max_backoff_interval is >= initial_backoff_interval
+        and that both invervals are positive.
+
+        """
         if initial_backoff_interval <= 0:
             raise ValueError("initial_backoff_interval must be greater than 0")
         if max_backoff_interval < initial_backoff_interval:

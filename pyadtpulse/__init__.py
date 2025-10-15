@@ -1,23 +1,22 @@
 """Base Python Class for pyadtpulse."""
 
-import logging
-import asyncio
 import time
-from threading import RLock, Thread
+import asyncio
+import logging
 from warnings import warn
+from threading import RLock, Thread
 
-import aiohttp_fast_zlib
 import uvloop
+import aiohttp_fast_zlib
 
+from .util import DebugRLock, set_debug_lock
 from .const import (
-    ADT_DEFAULT_HTTP_USER_AGENT,
-    ADT_DEFAULT_KEEPALIVE_INTERVAL,
-    ADT_DEFAULT_RELOGIN_INTERVAL,
     DEFAULT_API_HOST,
+    ADT_DEFAULT_HTTP_USER_AGENT,
+    ADT_DEFAULT_RELOGIN_INTERVAL,
+    ADT_DEFAULT_KEEPALIVE_INTERVAL,
 )
 from .pyadtpulse_async import SYNC_CHECK_TASK_NAME, PyADTPulseAsync
-from .util import DebugRLock, set_debug_lock
-
 
 aiohttp_fast_zlib.enable()
 LOG = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ LOG = logging.getLogger(__name__)
 class PyADTPulse(PyADTPulseAsync):
     """Base object for ADT Pulse service."""
 
-    __slots__ = ("_session_thread", "_p_attribute_lock", "_login_exception")
+    __slots__ = ("_login_exception", "_p_attribute_lock", "_session_thread")
 
     def __init__(
         self,
@@ -41,6 +40,7 @@ class PyADTPulse(PyADTPulseAsync):
         relogin_interval: int = ADT_DEFAULT_RELOGIN_INTERVAL,
         detailed_debug_logging: bool = False,
     ):
+        """Init for the PyADTPull object."""
         self._p_attribute_lock = set_debug_lock(
             debug_locks, "pyadtpulse._p_attribute_lockattribute_lock"
         )
@@ -99,8 +99,7 @@ class PyADTPulse(PyADTPulseAsync):
 
     async def _sync_loop(self) -> None:
         """
-        Asynchronous function that represents the main loop of the synchronization
-        process.
+        Async function that represents the main loop of the process.
 
         This function is responsible for executing the synchronization logic. It starts
         by calling the `async_login` method to perform the login operation. After that,
@@ -114,6 +113,7 @@ class PyADTPulse(PyADTPulseAsync):
         `_authenticated` event is set. Inside the loop, it waits for 0.5 seconds using
         the `asyncio.sleep` function. This wait allows the logout process to complete
         before continuing with the synchronization logic.
+
         """
         try:
             await self.async_login()
@@ -140,10 +140,12 @@ class PyADTPulse(PyADTPulseAsync):
             await asyncio.sleep(0.5)
 
     def login(self) -> None:
-        """Login to ADT Pulse and generate access token.
+        """
+        Login to ADT Pulse and generate access token.
 
         Raises:
             Exception from async_login
+
         """
         self._p_attribute_lock.acquire()
         # probably shouldn't be a daemon thread
@@ -180,29 +182,35 @@ class PyADTPulse(PyADTPulseAsync):
 
     @property
     def attribute_lock(self) -> "RLock| DebugRLock":
-        """Get attribute lock for PyADTPulse object.
+        """
+        Get attribute lock for PyADTPulse object.
 
         Returns:
             RLock: thread Rlock
+
         """
         return self._p_attribute_lock
 
     @property
     def loop(self) -> asyncio.AbstractEventLoop | None:
-        """Get event loop.
+        """
+        Get event loop.
 
         Returns:
             Optional[asyncio.AbstractEventLoop]: the event loop object or
                                                  None if no thread is running
+
         """
         return self._pulse_connection_properties.loop
 
     @property
     def updates_exist(self) -> bool:
-        """Check if updated data exists.
+        """
+        Check if updated data exists.
 
         Returns:
             bool: True if updated data exists
+
         """
         with self._p_attribute_lock:
             if self._sync_task is None:
@@ -222,10 +230,12 @@ class PyADTPulse(PyADTPulseAsync):
             return False
 
     def update(self) -> bool:
-        """Update ADT Pulse data.
+        """
+        Update ADT Pulse data.
 
         Returns:
             bool: True on success
+
         """
         coro = self.async_update()
         return asyncio.run_coroutine_threadsafe(
@@ -236,18 +246,21 @@ class PyADTPulse(PyADTPulseAsync):
         ).result()
 
     async def async_login(self) -> None:
+        """Login to ADT Pulse asynchronously."""
         self._pulse_connection_properties.check_async(
             "Cannot login asynchronously with a synchronous session"
         )
         await super().async_login()
 
     async def async_logout(self) -> None:
+        """Logout of ADT Pulse asynchronously."""
         self._pulse_connection_properties.check_async(
             "Cannot logout asynchronously with a synchronous session"
         )
         await super().async_logout()
 
     async def async_update(self) -> bool:
+        """Update ADT Pulse data asynchronously."""
         self._pulse_connection_properties.check_async(
             "Cannot update asynchronously with a synchronous session"
         )

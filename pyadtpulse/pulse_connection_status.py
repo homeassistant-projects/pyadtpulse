@@ -4,31 +4,34 @@ from asyncio import Event
 
 from typeguard import typechecked
 
-from .pulse_backoff import PulseBackoff
 from .util import set_debug_lock
+from .pulse_backoff import PulseBackoff
 
 
 class PulseConnectionStatus:
     """Pulse Connection Status."""
 
     __slots__ = (
-        "_backoff",
         "_authenticated_flag",
+        "_backoff",
         "_pcs_attribute_lock",
     )
 
     @typechecked
     def __init__(self, debug_locks: bool = False, detailed_debug_logging=False):
-        self._pcs_attribute_lock = set_debug_lock(
-            debug_locks, "pyadtpulse.pcs_attribute_lock"
-        )
-        """Initialize the connection status object.
+        """
+        Initialize the connection status object.
 
         Args:
             debug_locks (bool, optional): Enable debug locks. Defaults to False.
-            detailed_debug_logging (bool, optional): Enable detailed debug logging for the backoff.
+            detailed_debug_logging (bool, optional): Detailed debug logging for backoff.
                 Defaults to False.
+
         """
+        self._pcs_attribute_lock = set_debug_lock(
+            debug_locks, "pyadtpulse.pcs_attribute_lock"
+        )
+
         self._backoff = PulseBackoff(
             "Connection Status",
             initial_backoff_interval=1,
