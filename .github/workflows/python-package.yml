@@ -25,4 +25,4 @@ jobs:
 
       - name: Test with pytest
         run: |
-          uv run --frozen pytest --isolate
+          uv run --no-dev --frozen pytest --isolate
