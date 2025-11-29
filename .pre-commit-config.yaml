@@ -1,4 +1,3 @@
-fail_fast: true
 repos:
 -   hooks:
     -   id: check-yaml
