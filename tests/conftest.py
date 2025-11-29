@@ -456,7 +456,6 @@ class PulseMockedWebServer:
 
 
 @pytest.fixture
-@pytest.mark.asyncio
 async def mocked_pulse_server() -> PulseMockedWebServer:
     """Fixture to create a mocked Pulse server."""
     pulse_properties = get_mocked_connection_properties()

@@ -140,7 +140,6 @@ def wrap_wait_for_update():
 
 
 @pytest.fixture
-@pytest.mark.asyncio
 async def adt_pulse_instance(
     mocked_server_responses: aioresponses,
     extract_ids_from_data_directory: list[str],
