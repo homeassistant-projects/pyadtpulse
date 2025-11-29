@@ -4,6 +4,7 @@ fail_fast: true
 # To update pre-commit hooks run:
 # uv run pre-commit autoupdate
 
+
 repos:
 -   hooks:
     -   id: check-yaml
@@ -16,4 +17,4 @@ repos:
     -   id: ruff-check
     -   id: ruff-format
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.3
+    rev: v0.14.7
