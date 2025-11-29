@@ -19,6 +19,10 @@ jobs:
       - name: Set up UV
         uses: astral-sh/setup-uv@v6
 
+      - name: Sync uv
+        run: |
+          uv sync
+
       - name: Build package with uv
         run: |
           uv --no-dev --no-default-groups build

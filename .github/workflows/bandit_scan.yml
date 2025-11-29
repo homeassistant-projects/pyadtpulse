@@ -17,6 +17,10 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
 
+      - name: Sync uv
+        run: |
+          uv sync
+
       - name: Run Bandit
         run: |
           uv run --only-group bandit bandit --configfile pyproject.toml --recursive . --format sarif --output results.sarif || true
