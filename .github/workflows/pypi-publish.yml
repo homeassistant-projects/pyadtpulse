@@ -19,10 +19,9 @@ jobs:
       - name: Set up UV
         uses: astral-sh/setup-uv@v6
 
-      - name: sync venv and build package with uv
+      - name: Build package with uv
         run: |
-          uv sync
-          uv build
+          uv --no-dev --no-default-groups build
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
