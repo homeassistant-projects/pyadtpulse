@@ -27,22 +27,25 @@ dependencies = [
     "aiohttp>=3.12.14",
     "aiohttp-fast-zlib[zlib-ng]>=0.3.0",
     "lxml>=6.0.0",
+    "typeguard>=4.4.4",
     "uvloop>=0.21.0",
 ]
 
 [dependency-groups]
-dev = [
-    "aioresponses>=0.7.8",
+bandit = [
     "bandit[sarif,toml]>=1.8.6",
-    "freezegun>=1.5.2",
+]
+dev = [
     "pre-commit>=4.2.0",
+    "ruff>=0.12.3",
+]
+testing = [
+    "aioresponses>=0.7.8",
+    "freezegun>=1.5.2",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.0.0",
     "pytest-isolate>=0.0.12",
     "pytest-mock>=3.14.1",
-    "ruff>=0.12.3",
-    "twine>=6.1.0",
-    "typeguard>=4.4.4",
 ]
 
 [tool.bandit]
@@ -52,6 +55,7 @@ exclude = ["example-client.py"]
 
 [tool.uv]
 required-version = ">=0.8.0"
+default-groups = ["dev", "testing"]
 
 [tool.uv.build-backend]
 module-name = "pyadtpulse"
