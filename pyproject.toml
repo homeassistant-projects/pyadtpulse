@@ -7,7 +7,7 @@ name = "pyadtpulse"
 version = "1.2.11"
 description = "Python interface for ADT Pulse security systems"
 authors = [{ name = "Ryan Snodgrass" }]
-maintainers = [{ name = "Elliot Worth", email = "elliotworth@protonmail.com"}]
+maintainers = [{ name = "Elliot Worth", email = "elliotworth@protonmail.com" }]
 readme = "README.md"
 license = "Apache-2.0"
 classifiers = [
@@ -23,12 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 requires-python = ">=3.12,<3.14"
-dependencies = [
-    "aiohttp>=3.12.14",
-    "aiohttp-fast-zlib[zlib-ng]>=0.3.0",
-    "lxml>=6.0.0",
-    "uvloop>=0.21.0",
-]
+dependencies = ["aiohttp", "aiohttp-fast-zlib[zlib-ng]", "lxml", "uvloop"]
 
 [dependency-groups]
 dev = [
@@ -59,7 +54,7 @@ module-root = ""
 
 
 [tool.ruff]
-line-length = 88 # Matches black
+line-length = 88                # Matches black
 show-fixes = true
 target-version = "py313"
 exclude = ["example-client.py"]
