@@ -445,7 +445,7 @@ class PulseMockedWebServer:
             return serve_file("signin_fail.html")
         if path == self._make_local_prefix(ADT_DEVICE_URI):
             device_id = query_params["id"][0]
-            return serve_file(f"device-{device_id}.html")
+            return serve_file(f"device_{device_id}.html")
         files_to_serve = self.uri_mapping.get(path)
         if not files_to_serve:
             return web.Response(text="URI not found", status=404)
@@ -456,8 +456,9 @@ class PulseMockedWebServer:
 
 
 @pytest.fixture
-async def mocked_pulse_server() -> PulseMockedWebServer:
+def mocked_pulse_server(
+    get_mocked_connection_properties: PulseConnectionProperties,
+) -> PulseMockedWebServer:
     """Fixture to create a mocked Pulse server."""
-    pulse_properties = get_mocked_connection_properties()
-    m = PulseMockedWebServer(pulse_properties)
+    m = PulseMockedWebServer(get_mocked_connection_properties)
     return m

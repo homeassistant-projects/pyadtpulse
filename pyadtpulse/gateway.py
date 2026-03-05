@@ -5,7 +5,7 @@ import logging
 from typing import Any
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from threading import RLock
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 
 from typeguard import typechecked
 
@@ -45,10 +45,14 @@ class ADTPulseGateway:
 
     manufacturer: str = "Unknown"
     _status_text: str = "OFFLINE"
-    backoff = PulseBackoff(
-        "Gateway", ADT_DEFAULT_POLL_INTERVAL, ADT_GATEWAY_MAX_OFFLINE_POLL_INTERVAL
+    backoff: PulseBackoff = field(
+        default_factory=lambda: PulseBackoff(
+            "Gateway",
+            ADT_DEFAULT_POLL_INTERVAL,
+            ADT_GATEWAY_MAX_OFFLINE_POLL_INTERVAL,
+        )
     )
-    _attribute_lock = RLock()
+    _attribute_lock: RLock = field(default_factory=RLock)
     model: str | None = None
     serial_number: str | None = None
     next_update: int = 0

@@ -7,7 +7,7 @@ name = "pyadtpulse"
 version = "1.2.12"
 description = "Python interface for ADT Pulse security systems"
 authors = [{ name = "Ryan Snodgrass" }]
-maintainers = [{ name = "Elliot Worth", email = "elliotworth@protonmail.com"}]
+maintainers = [{ name = "Elliot Worth", email = "elliotworth@protonmail.com" }]
 readme = "README.md"
 license = "Apache-2.0"
 classifiers = [
@@ -30,6 +30,7 @@ dependencies = [
     "typeguard>=4.4.4",
     "uvloop>=0.21.0",
 ]
+
 
 [dependency-groups]
 bandit = [
@@ -63,7 +64,7 @@ module-root = ""
 
 
 [tool.ruff]
-line-length = 88 # Matches black
+line-length = 88                # Matches black
 show-fixes = true
 target-version = "py313"
 exclude = ["example-client.py"]

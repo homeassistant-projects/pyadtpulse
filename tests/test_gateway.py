@@ -1,6 +1,5 @@
 """Unit tests for the ADTPulseGateway class and its related functionality."""
 
-import time
 from ipaddress import IPv4Address
 
 import pytest
@@ -148,23 +147,21 @@ def test_poll_interval_raises_value_error_when_set_to_0():
 
 # backoff object can wait for correct amount of time before returning
 @pytest.mark.asyncio
-async def test_backoff_wait_time():
+async def test_backoff_wait_time(mock_sleep):
     """Test that backoff object can wait for correct amount of time before returning."""
     # Arrange
     gateway = ADTPulseGateway()
     gateway.backoff._backoff_count = 1
     gateway.backoff._threshold = 0
-    gateway.backoff._initial_backoff_interval = 1.0
+    gateway.backoff._initial_backoff_interval = 5.0
     gateway.backoff._max_backoff_interval = 10.0
-    gateway.backoff._expiration_time = time.time() + 5.0
+    gateway.backoff._expiration_time = 0.0
 
     # Act
-    start_time = time.time()
     await gateway.backoff.wait_for_backoff()
 
     # Assert
-    end_time = time.time()
-    assert end_time - start_time >= 5.0
+    mock_sleep.assert_awaited_once_with(5.0)
 
 
 def test_set_gateway_attributes_empty_string_fixed():
