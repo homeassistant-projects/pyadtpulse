@@ -1,5 +1,6 @@
 """Pulse Query Manager."""
 
+import asyncio
 from http import HTTPStatus
 from time import time
 from asyncio import wait_for
@@ -344,7 +345,7 @@ class PulseQueryManager:
                     self._handle_network_errors(ex)
                 query_backoff.increment_backoff()
                 continue
-            except TimeoutError as ex:
+            except (TimeoutError, asyncio.TimeoutError) as ex:
                 if retry == max_retries:
                     LOG.debug("Exceeded max retries of %d, giving up", max_retries)
                     raise PulseServerConnectionError(

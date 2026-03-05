@@ -142,7 +142,8 @@ class TestADTPulseSiteProperties:
         site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
         current_time = time.time()
         mocker.patch.object(site_properties, "_last_updated", return_value=current_time)
-        assert site_properties.updates_may_exist is False
+        with pytest.warns(DeprecationWarning, match="updates_may_exist"):
+            assert site_properties.updates_may_exist is False
 
     @pytest.mark.asyncio
     async def test_update_site_zone_data_async(self, mocker):
@@ -164,8 +165,9 @@ class TestADTPulseSiteProperties:
         mock_zones.flatten.return_value = [flattened_zone]
         site_properties._zones = mock_zones
 
-        result = await site_properties.async_update()
-        assert result is False
+        with pytest.warns(DeprecationWarning, match="updating zones"):
+            result = await site_properties.async_update()
+            assert result is False
 
     @pytest.mark.asyncio
     async def test_cannot_set_alarm_status(self, mocker):
