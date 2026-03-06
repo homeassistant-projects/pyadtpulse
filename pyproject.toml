@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "pyadtpulse"
-version = "1.2.13"
+version = "1.2.14"
 description = "Python interface for ADT Pulse security systems"
 authors = [{ name = "Ryan Snodgrass" }]
 maintainers = [{ name = "Elliot Worth", email = "elliotworth@protonmail.com" }]
@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -28,7 +29,6 @@ dependencies = [
     "aiohttp-fast-zlib[zlib-ng]>=0.3.0",
     "lxml>=6.0.0",
     "typeguard>=4.4.4",
-    "uvloop>=0.21.0",
 ]
 
 
