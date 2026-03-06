@@ -28,7 +28,6 @@ dependencies = [
     "aiohttp-fast-zlib[zlib-ng]>=0.3.0",
     "lxml>=6.0.0",
     "typeguard>=4.4.4",
-    "uvloop>=0.21.0",
 ]
 
 

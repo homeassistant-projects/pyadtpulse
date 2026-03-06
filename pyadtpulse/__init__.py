@@ -6,7 +6,6 @@ import logging
 from warnings import warn
 from threading import RLock, Thread
 
-import uvloop
 import aiohttp_fast_zlib
 
 from .util import DebugRLock, set_debug_lock
@@ -88,7 +87,6 @@ class PyADTPulse(PyADTPulseAsync):
         self._p_attribute_lock.acquire()
 
         LOG.debug("Creating ADT Pulse background thread")
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         loop = asyncio.new_event_loop()
         self._pulse_connection_properties.loop = loop
         loop.run_until_complete(self._sync_loop())
