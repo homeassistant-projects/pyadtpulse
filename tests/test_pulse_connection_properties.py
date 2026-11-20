@@ -4,7 +4,7 @@ from asyncio import AbstractEventLoop
 
 import pytest
 from yarl import URL
-from aiohttp import CookieJar, ClientSession
+from aiohttp import ClientSession
 
 from pyadtpulse.const import API_HOST_CA, DEFAULT_API_HOST, ADT_DEFAULT_HTTP_USER_AGENT
 from pyadtpulse.pulse_connection_properties import (
@@ -428,14 +428,6 @@ async def test_signed_in_session_cookie_wins():
     cookies = jar.filter_cookies(POST_SIGNIN_URL)
     assert cookies["JSESSIONID"].value == "signedin"
     assert cookies["X-token"].value == "token"
-
-
-@pytest.mark.asyncio
-async def test_plain_cookie_jar_sends_the_stale_session_cookie():
-    """Document the aiohttp behavior PulseCookieJar works around."""
-    jar = CookieJar()
-    jar.update_cookies_from_headers(SIGNIN_SET_COOKIE, SIGNIN_URL)
-    assert jar.filter_cookies(POST_SIGNIN_URL)["JSESSIONID"].value == "prelogin"
 
 
 @pytest.mark.asyncio

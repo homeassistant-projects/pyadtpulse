@@ -365,3 +365,26 @@ async def test_login_error_on_other_api_version(
     with pytest.raises(PulseNotLoggedInError):
         await pc.async_do_login_query()
     assert not pc.is_connected
+
+
+@pytest.mark.asyncio
+async def test_waiting_query_uses_version_adopted_by_login(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """A query waiting for login is sent to the version that login landed on."""
+    pc = setup_pulse_connection()
+    pc._connection_properties.api_version = "27.0.0-140"
+    add_custom_response(
+        mocked_server_responses,
+        read_file,
+        _other_version_url(ADT_SUMMARY_URI),
+        file_name="summary.html",
+    )
+    query = asyncio.create_task(pc.async_query(ADT_SUMMARY_URI))
+    await asyncio.sleep(0)
+    assert not query.done()  # waiting for the authenticated flag
+    pc._connection_properties.api_version = OTHER_API_VERSION
+    pc._connection_status.authenticated_flag.set()
+    status, _, url = await query
+    assert status == 200
+    assert str(url) == _other_version_url(ADT_SUMMARY_URI)
