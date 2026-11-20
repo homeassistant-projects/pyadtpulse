@@ -3,10 +3,14 @@
 from asyncio import AbstractEventLoop
 
 import pytest
-from aiohttp import ClientSession
+from yarl import URL
+from aiohttp import CookieJar, ClientSession
 
 from pyadtpulse.const import API_HOST_CA, DEFAULT_API_HOST, ADT_DEFAULT_HTTP_USER_AGENT
-from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
+from pyadtpulse.pulse_connection_properties import (
+    PulseCookieJar,
+    PulseConnectionProperties,
+)
 
 
 class TestPulseConnectionProperties:
@@ -394,3 +398,60 @@ class TestPulseConnectionProperties:
 def test_split_versioned_url(url, expected):
     """Test splitting a Pulse URL into its API version and the URI after it."""
     assert PulseConnectionProperties.split_versioned_url(url) == expected
+
+
+# Set-Cookie headers from a real Pulse sign-in (values replaced): the response
+# to the sign-in POST keeps the pre-login session cookie on /myhome/<version>
+# and adds the signed-in one on /myhome.
+SIGNIN_URL = URL("https://portal.adtpulse.com/myhome/30.0.0-61/access/signin.jsp")
+PRE_LOGIN_SET_COOKIE = [
+    "JSESSIONID=prelogin; path=/myhome/30.0.0-61; HttpOnly; secure; SameSite=Lax"
+]
+SIGNIN_SET_COOKIE = [
+    "JSESSIONID=prelogin; path=/myhome/30.0.0-61; HttpOnly; secure; SameSite=Lax",
+    "JSESSIONID=signedin; Path=/myhome; Secure; HttpOnly",
+    "ICLocal=en_US; Expires=Sat, 20 Nov 2027 22:56:55 GMT; Path=/",
+    "X-token=token; Version=1; Domain=.adtpulse.com; Path=/; Secure; HttpOnly",
+]
+POST_SIGNIN_URL = URL(
+    "https://portal.adtpulse.com/myhome/30.0.0-61/access/PostSigninProcessServ"
+)
+
+
+@pytest.mark.asyncio
+async def test_signed_in_session_cookie_wins():
+    """After sign-in the signed-in JSESSIONID, not the pre-login one, is sent."""
+    jar = PulseCookieJar()
+    jar.update_cookies_from_headers(PRE_LOGIN_SET_COOKIE, SIGNIN_URL)
+    assert jar.filter_cookies(POST_SIGNIN_URL)["JSESSIONID"].value == "prelogin"
+    jar.update_cookies_from_headers(SIGNIN_SET_COOKIE, SIGNIN_URL)
+    cookies = jar.filter_cookies(POST_SIGNIN_URL)
+    assert cookies["JSESSIONID"].value == "signedin"
+    assert cookies["X-token"].value == "token"
+
+
+@pytest.mark.asyncio
+async def test_plain_cookie_jar_sends_the_stale_session_cookie():
+    """Document the aiohttp behavior PulseCookieJar works around."""
+    jar = CookieJar()
+    jar.update_cookies_from_headers(SIGNIN_SET_COOKIE, SIGNIN_URL)
+    assert jar.filter_cookies(POST_SIGNIN_URL)["JSESSIONID"].value == "prelogin"
+
+
+@pytest.mark.asyncio
+async def test_later_version_session_cookie_is_kept():
+    """A session cookie Pulse sets on /myhome/<version> after sign-in is kept."""
+    jar = PulseCookieJar()
+    jar.update_cookies_from_headers(SIGNIN_SET_COOKIE, SIGNIN_URL)
+    jar.update_cookies_from_headers(
+        ["JSESSIONID=fresh; path=/myhome/30.0.0-61; HttpOnly; secure"], POST_SIGNIN_URL
+    )
+    assert jar.filter_cookies(POST_SIGNIN_URL)["JSESSIONID"].value == "fresh"
+
+
+@pytest.mark.asyncio
+async def test_session_uses_pulse_cookie_jar():
+    """The connection's session stores cookies in a PulseCookieJar."""
+    p = PulseConnectionProperties("https://portal.adtpulse.com")
+    assert isinstance(p.session.cookie_jar, PulseCookieJar)
+    await p.clear_session()
