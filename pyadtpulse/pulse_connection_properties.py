@@ -72,7 +72,7 @@ class PulseConnectionProperties:
         """
         parsed = urlsplit(url)
         query = f"?{parsed.query}" if parsed.query else ""
-        m = fullmatch(f"{API_PREFIX}([^/]+)(/.*)", parsed.path)
+        m = fullmatch(rf"{API_PREFIX}(\d+\.\d+\.\d+-\d+)(/.*)", parsed.path)
         if m is None:
             return None, parsed.path + query
         return m.group(1), m.group(2) + query

@@ -3,6 +3,7 @@
 import datetime
 from time import time
 
+from .pulse_mfa import PulseMFAChallenge
 from .pulse_backoff import PulseBackoff
 
 
@@ -132,9 +133,15 @@ class PulseGatewayOfflineError(PulseExceptionWithBackoff):
 class PulseMFARequiredError(PulseLoginException):
     """MFA required error."""
 
-    def __init__(self):
-        """Initialize Pulse MFA required error exception."""
+    def __init__(self, challenge: PulseMFAChallenge | None = None):
+        """
+        Initialize Pulse MFA required error exception.
+
+        challenge is the MFA challenge Pulse issued, when the MFA page carried
+        one. With it, the login can be finished with a verification code.
+        """
         super().__init__("Authentication failed because MFA is required")
+        self.challenge = challenge
 
 
 class PulseNotLoggedInError(PulseLoginException):

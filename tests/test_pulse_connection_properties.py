@@ -393,6 +393,10 @@ class TestPulseConnectionProperties:
             ("30.0.0-61", "/mfa/mfaSignIn.jsp?workflow=challenge"),
         ),
         ("https://portal.adtpulse.com/", (None, "/")),
+        (
+            "https://portal.adtpulse.com/myhome/access/signin.jsp",
+            (None, "/myhome/access/signin.jsp"),
+        ),
     ],
 )
 def test_split_versioned_url(url, expected):
