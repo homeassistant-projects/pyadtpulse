@@ -371,3 +371,26 @@ class TestPulseConnectionProperties:
         # Assert
         with pytest.raises(RuntimeError):
             connection_properties.check_async("Async login not performed")
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://portal.adtpulse.com/myhome/31.0.0-39/access/signin.jsp?e=ns&partner=adt",
+            ("31.0.0-39", "/access/signin.jsp?e=ns&partner=adt"),
+        ),
+        (
+            "https://portal.adtpulse.com/myhome/30.0.0-61/summary/summary.jsp",
+            ("30.0.0-61", "/summary/summary.jsp"),
+        ),
+        (
+            "https://portal.adtpulse.com/myhome/30.0.0-61/mfa/mfaSignIn.jsp?workflow=challenge",
+            ("30.0.0-61", "/mfa/mfaSignIn.jsp?workflow=challenge"),
+        ),
+        ("https://portal.adtpulse.com/", (None, "/")),
+    ],
+)
+def test_split_versioned_url(url, expected):
+    """Test splitting a Pulse URL into its API version and the URI after it."""
+    assert PulseConnectionProperties.split_versioned_url(url) == expected

@@ -1,7 +1,8 @@
 """Pulse connection info."""
 
-from re import search
+from re import search, fullmatch
 from asyncio import AbstractEventLoop
+from urllib.parse import urlsplit
 
 from aiohttp import ClientSession
 from typeguard import typechecked
@@ -56,6 +57,22 @@ class PulseConnectionProperties:
         if m is not None:
             version = m.group(1)
         return version
+
+    @staticmethod
+    def split_versioned_url(url: str) -> tuple[str | None, str]:
+        """
+        Split a Pulse URL into its API version and the URI after the version.
+
+        "https://portal.adtpulse.com/myhome/31.0.0-39/access/signin.jsp?e=ns"
+        gives ("31.0.0-39", "/access/signin.jsp?e=ns"). A URL outside
+        /myhome/<version>/ gives (None, path and query).
+        """
+        parsed = urlsplit(url)
+        query = f"?{parsed.query}" if parsed.query else ""
+        m = fullmatch(f"{API_PREFIX}([^/]+)(/.*)", parsed.path)
+        if m is None:
+            return None, parsed.path + query
+        return m.group(1), m.group(2) + query
 
     def __init__(
         self,

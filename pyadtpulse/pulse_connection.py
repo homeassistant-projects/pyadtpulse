@@ -122,8 +122,7 @@ class PulseConnection(PulseQueryManager):
             Will raise the appropriate exception.
             """
             self._login_in_progress = False
-            url = self._connection_properties.make_url(ADT_LOGIN_URI)
-            if response_url_string.startswith(url):
+            if response_uri.startswith(ADT_LOGIN_URI):
                 error = tree.find(
                     path=".//div[@id='warnMsgContents']",
                     namespaces=None,
@@ -144,10 +143,8 @@ class PulseConnection(PulseQueryManager):
                 else:
                     LOG.error("Unknown error logging into pulse: no message given")
                     raise PulseNotLoggedInError()
-            else:
-                url = self._connection_properties.make_url(ADT_MFA_FAIL_URI)
-                if url == response_url_string:
-                    raise PulseMFARequiredError()
+            elif response_uri == ADT_MFA_FAIL_URI:
+                raise PulseMFARequiredError()
 
         tree = make_etree(
             response[0],
@@ -163,9 +160,14 @@ class PulseConnection(PulseQueryManager):
                 f"URL: {response[2]}, response: {response[1]}",
                 self._login_backoff,
             )
-        url = self._connection_properties.make_url(ADT_SUMMARY_URI)
         response_url_string = str(response[2])
-        if url != response_url_string:
+        # Pulse serves more than one API version at once and can answer a
+        # request for one version with a redirect into another, so compare
+        # only the part of the URL after the version.
+        response_version, response_uri = (
+            self._connection_properties.split_versioned_url(response_url_string)
+        )
+        if response_uri != ADT_SUMMARY_URI:
             determine_error_type(tree=tree)
             # if we get here we can't determine the error
             # raise a generic authentication error
@@ -174,6 +176,16 @@ class PulseConnection(PulseQueryManager):
                 response_url_string,
             )
             raise PulseAuthenticationError()
+        if (
+            response_version is not None
+            and response_version != self._connection_properties.api_version
+        ):
+            LOG.debug(
+                "Pulse API version changed from %s to %s during login",
+                self._connection_properties.api_version,
+                response_version,
+            )
+            self._connection_properties.api_version = response_version
         return tree
 
     @typechecked
