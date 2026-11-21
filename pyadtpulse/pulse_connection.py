@@ -13,6 +13,7 @@ from urllib.parse import quote
 
 from lxml import html
 from yarl import URL
+from aiohttp import ClientError, ClientTimeout
 from typeguard import typechecked
 
 from .util import make_etree, set_debug_lock
@@ -284,22 +285,33 @@ class PulseConnection(PulseQueryManager):
         challenge = self._mfa_challenge
         if challenge is None:
             raise PulseNotLoggedInError()
-        status, text, _ = await self.async_query(
-            challenge.proxy_url(href),
-            method,
-            extra_params=data,
-            extra_headers=challenge.headers(x_token),
-            timeout=ADT_DEFAULT_LOGIN_TIMEOUT,
-            requires_authentication=False,
-        )
-        if status != 200:
-            LOG.error("Pulse MFA command %s returned HTTP %s", href, status)
-            raise PulseAuthenticationError()
+        # Not async_query: Pulse answers a rejected code with HTTP 400 and a JSON
+        # detail, which async_query would report as a server error (bumping the
+        # connection backoff), and an OTP must not be retried.
+        url = self._connection_properties.make_url(challenge.proxy_url(href))
+        try:
+            async with self._connection_properties.session.request(
+                method,
+                url,
+                headers=challenge.headers(x_token),
+                data=data if method == "POST" else None,
+                timeout=ClientTimeout(total=float(ADT_DEFAULT_LOGIN_TIMEOUT)),
+            ) as response:
+                status = response.status
+                text = await response.text()
+        except (ClientError, TimeoutError, UnicodeDecodeError) as ex:
+            raise PulseServerConnectionError(
+                f"MFA command {href} failed: {ex}",
+                self._connection_status.get_backoff(),
+            ) from ex
         try:
             result = json.loads(text or "")
         except ValueError as ex:
+            LOG.error("Pulse MFA command %s returned HTTP %s, not JSON", href, status)
             raise PulseAuthenticationError() from ex
-        if not isinstance(result, dict):
+        if status != 200 or not isinstance(result, dict):
+            detail = result.get("detail") if isinstance(result, dict) else None
+            LOG.error("Pulse MFA command %s returned HTTP %s: %s", href, status, detail)
             raise PulseAuthenticationError()
         return result
 

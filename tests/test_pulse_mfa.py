@@ -151,16 +151,23 @@ async def test_mfa_wrong_code(mocked_server_responses, get_mocked_url, read_file
     pc = setup_pulse_connection()
     await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
     _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
-    _add_json(
-        mocked,
-        read_file,
+    # what Pulse sends for a wrong code
+    mocked.add(
         _proxy(get_mocked_url, VALIDATE_OTP_HREF),
-        {"code": 1, "detail": "Invalid verification code"},
-        method="POST",
+        "POST",
+        status=400,
+        body=json.dumps(
+            {
+                "code": 400,
+                "detail": "Invalid code. Please re-enter or request a new code",
+            }
+        ),
     )
     with pytest.raises(PulseAuthenticationError):
         await pc.async_submit_mfa_code("000000")
     assert not pc.is_connected
+    # a wrong code is not a connection problem
+    assert pc._connection_status.get_backoff().backoff_count == 0
 
 
 @pytest.mark.asyncio
