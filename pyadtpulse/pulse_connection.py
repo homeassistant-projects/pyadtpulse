@@ -320,8 +320,11 @@ class PulseConnection(PulseQueryManager):
         try:
             result = json.loads(text or "")
         except ValueError as ex:
-            LOG.error("Pulse MFA command %s returned HTTP %s, not JSON", href, status)
-            raise PulseAuthenticationError() from ex
+            # not an answer to the command, such as a gateway error page
+            raise PulseServerConnectionError(
+                f"MFA command {href} returned HTTP {status}, not JSON",
+                self._connection_status.get_backoff(),
+            ) from ex
         if status != 200 or not isinstance(result, dict):
             detail = result.get("detail") if isinstance(result, dict) else None
             LOG.error("Pulse MFA command %s returned HTTP %s: %s", href, status, detail)

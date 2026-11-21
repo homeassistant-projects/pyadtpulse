@@ -17,7 +17,11 @@ from pyadtpulse.pulse_mfa import (
     ADT_POST_SIGNIN_URI,
     PulseMFAChallenge,
 )
-from pyadtpulse.exceptions import PulseMFARequiredError, PulseAuthenticationError
+from pyadtpulse.exceptions import (
+    PulseMFARequiredError,
+    PulseAuthenticationError,
+    PulseServerConnectionError,
+)
 from tests.test_pulse_connection import setup_pulse_connection
 
 # values in tests/data_files/mfa.html
@@ -288,3 +292,23 @@ async def test_mfa_trust_name_taken(mocked_server_responses, get_mocked_url, rea
     assert len(names) == 2
     assert names[1].startswith("Home%20Assistant%20")
     assert len(names[1]) == len("Home%20Assistant%20") + 4
+
+
+@pytest.mark.asyncio
+async def test_mfa_gateway_error_is_not_a_wrong_code(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """A non-JSON error page while validating is a server error, not a bad code."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    mocked.add(
+        _proxy(get_mocked_url, VALIDATE_OTP_HREF),
+        "POST",
+        status=502,
+        body="<html><body>Bad Gateway</body></html>",
+        content_type="text/html",
+    )
+    with pytest.raises(PulseServerConnectionError):
+        await pc.async_submit_mfa_code("123456")
