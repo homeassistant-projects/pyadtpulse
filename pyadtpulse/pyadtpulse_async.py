@@ -642,6 +642,49 @@ class PyADTPulseAsync:
         )
         await self._pulse_connection.async_fetch_version()
         tree = await self._pulse_connection.async_do_login_query()
+        await self._async_finish_login(tree)
+
+    async def async_request_mfa_code(self, method_id: str | None = None) -> str:
+        """
+        Send a verification code for the MFA challenge async_login raised.
+
+        Call after async_login raises PulseMFARequiredError, then pass the code
+        to async_complete_mfa_login.
+
+        Args:
+            method_id (str, optional): the verification method, such as "EMAIL".
+                Defaults to the first method registered on the account.
+
+        Returns:
+            str: the id of the method the code was sent with
+
+        Raises:
+            PulseNotLoggedInError: if no MFA challenge is pending
+            PulseAuthenticationError: if Pulse refuses the request
+
+        """
+        return await self._pulse_connection.async_request_mfa_code(method_id)
+
+    async def async_complete_mfa_login(
+        self, code: str, device_name: str = "pyadtpulse"
+    ) -> None:
+        """
+        Finish a login that needed MFA, using the verification code Pulse sent.
+
+        The fingerprint is added to the account's trusted devices under
+        device_name, so later logins with it skip MFA. If Pulse refuses that,
+        the login still succeeds and a warning is logged.
+
+        Raises:
+            PulseNotLoggedInError: if no MFA challenge is pending, if the login
+                fails after the code was accepted (start over), or no sites
+            PulseAuthenticationError: if Pulse rejects the code
+
+        """
+        tree = await self._pulse_connection.async_submit_mfa_code(code, device_name)
+        await self._async_finish_login(tree)
+
+    async def _async_finish_login(self, tree: html.HtmlElement | None) -> None:
         if tree is None:
             await self._pulse_connection.quick_logout()
             ex = PulseNotLoggedInError()

@@ -297,6 +297,8 @@ class PulseQueryManager:
                             uri,
                         )
                         raise PulseNotLoggedInError() from ex
+                # build it now: a login while we waited may have changed version
+                url = self._connection_properties.make_url(uri)
                 async with self._connection_properties.session.request(
                     method,
                     url,
