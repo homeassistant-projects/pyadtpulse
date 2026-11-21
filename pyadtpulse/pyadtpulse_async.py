@@ -676,7 +676,8 @@ class PyADTPulseAsync:
         the login still succeeds and a warning is logged.
 
         Raises:
-            PulseNotLoggedInError: if no MFA challenge is pending, or no sites
+            PulseNotLoggedInError: if no MFA challenge is pending, if the login
+                fails after the code was accepted (start over), or no sites
             PulseAuthenticationError: if Pulse rejects the code
 
         """

@@ -6,6 +6,7 @@ This is the main interface to the http functions to access ADT Pulse.
 
 import re
 import json
+import asyncio
 import logging
 import secrets
 from http import HTTPStatus
@@ -312,7 +313,8 @@ class PulseConnection(PulseQueryManager):
             ) as response:
                 status = response.status
                 text = await response.text()
-        except (ClientError, TimeoutError, UnicodeDecodeError) as ex:
+        # asyncio.TimeoutError is a separate class before Python 3.11
+        except (ClientError, asyncio.TimeoutError, UnicodeDecodeError) as ex:
             raise PulseServerConnectionError(
                 f"MFA command {href} failed: {ex}",
                 self._connection_status.get_backoff(),
@@ -388,7 +390,8 @@ class PulseConnection(PulseQueryManager):
             html.HtmlElement: the parsed summary page
 
         Raises:
-            PulseNotLoggedInError: if no MFA challenge is pending
+            PulseNotLoggedInError: if no MFA challenge is pending, or the login
+                fails after the code was accepted (start over)
             PulseAuthenticationError: if Pulse rejects the code
 
         """
@@ -418,22 +421,23 @@ class PulseConnection(PulseQueryManager):
             except _PulseMFACommandError as ex:
                 if ex.status == HTTPStatus.CONFLICT:
                     continue
-            except (
-                PulseAuthenticationError,
-                PulseClientConnectionError,
-                PulseServerConnectionError,
-                PulseServiceTemporarilyUnavailableError,
-            ):
+            except PulseServerConnectionError:
                 pass
             break
         if trusted.get("detail") != "OK":
             LOG.warning("Pulse did not trust this device: %s", trusted)
+        # the code is spent: a retry after a failure below must start over
+        self._mfa_challenge = None
         response = await self.async_query(
             ADT_POST_SIGNIN_URI,
             timeout=ADT_DEFAULT_LOGIN_TIMEOUT,
             requires_authentication=False,
         )
-        tree = self.check_login_errors(response)
+        try:
+            tree = self.check_login_errors(response)
+        except PulseAuthenticationError as ex:
+            # the code was accepted, so this is not a wrong code
+            raise PulseNotLoggedInError() from ex
         self._login_succeeded()
         return tree
 

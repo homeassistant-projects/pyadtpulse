@@ -1,6 +1,7 @@
 """Test logging in through the Pulse MFA challenge."""
 
 import json
+import asyncio
 
 import pytest
 from yarl import URL
@@ -8,6 +9,7 @@ from yarl import URL
 from tests.conftest import LoginType, add_signin, add_custom_response
 from pyadtpulse.const import (
     ADT_LOGIN_URI,
+    ADT_SYSTEM_URI,
     ADT_SUMMARY_URI,
     ADT_MFA_FAIL_URI,
     DEFAULT_API_HOST,
@@ -19,6 +21,7 @@ from pyadtpulse.pulse_mfa import (
 )
 from pyadtpulse.exceptions import (
     PulseMFARequiredError,
+    PulseNotLoggedInError,
     PulseAuthenticationError,
     PulseServerConnectionError,
 )
@@ -311,4 +314,72 @@ async def test_mfa_gateway_error_is_not_a_wrong_code(
         content_type="text/html",
     )
     with pytest.raises(PulseServerConnectionError):
+        await pc.async_submit_mfa_code("123456")
+
+
+@pytest.mark.asyncio
+async def test_mfa_login_when_trust_times_out(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """A trust request that times out does not undo the login."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, VALIDATE_OTP_HREF),
+        {"code": 0, "detail": X_TOKEN},
+        method="POST",
+    )
+    mocked.add(
+        _proxy(get_mocked_url, TRUST_HREF), "POST", exception=asyncio.TimeoutError()
+    )
+    add_custom_response(
+        mocked,
+        read_file,
+        get_mocked_url(ADT_POST_SIGNIN_URI),
+        status=302,
+        headers={"Location": get_mocked_url(ADT_SUMMARY_URI)},
+    )
+    assert await pc.async_submit_mfa_code("123456") is not None
+    assert pc.is_connected
+
+
+@pytest.mark.asyncio
+async def test_mfa_retry_after_accepted_code_starts_over(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """Once a code is accepted, a retry needs a new login, not the old challenge."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, VALIDATE_OTP_HREF),
+        {"code": 0, "detail": X_TOKEN},
+        method="POST",
+    )
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, TRUST_HREF),
+        {"code": 0, "detail": "OK"},
+        method="POST",
+    )
+    # the page after the code is not the summary
+    add_custom_response(
+        mocked,
+        read_file,
+        get_mocked_url(ADT_POST_SIGNIN_URI),
+        status=302,
+        headers={"Location": get_mocked_url(ADT_SYSTEM_URI)},
+    )
+    # the code was accepted, so this is not reported as a wrong code
+    with pytest.raises(PulseNotLoggedInError):
+        await pc.async_submit_mfa_code("123456")
+    with pytest.raises(PulseNotLoggedInError):
         await pc.async_submit_mfa_code("123456")
