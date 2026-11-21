@@ -7,6 +7,8 @@ This is the main interface to the http functions to access ADT Pulse.
 import re
 import json
 import logging
+import secrets
+from http import HTTPStatus
 from time import time
 from asyncio import AbstractEventLoop
 from urllib.parse import quote
@@ -41,6 +43,17 @@ from .pulse_connection_properties import PulseConnectionProperties
 from .pulse_authentication_properties import PulseAuthenticationProperties
 
 LOG = logging.getLogger(__name__)
+
+# Pulse allows at most this many characters in a trusted device name
+ADT_MAX_DEVICE_NAME_LENGTH = 30
+
+
+class _PulseMFACommandError(PulseAuthenticationError):
+    """An MFA command Pulse answered with an error status."""
+
+    def __init__(self, status: int):
+        super().__init__()
+        self.status = status
 
 
 SESSION_COOKIES = {"X-mobile-browser": "false", "ICLocal": "en_US"}
@@ -312,7 +325,7 @@ class PulseConnection(PulseQueryManager):
         if status != 200 or not isinstance(result, dict):
             detail = result.get("detail") if isinstance(result, dict) else None
             LOG.error("Pulse MFA command %s returned HTTP %s: %s", href, status, detail)
-            raise PulseAuthenticationError()
+            raise _PulseMFACommandError(status)
         return result
 
     async def _async_mfa_command(self, name: str) -> dict:
@@ -388,18 +401,28 @@ class PulseConnection(PulseQueryManager):
         # web client sends the name URL-encoded inside the form body.
         trust_href = command["action"].rsplit("/", 1)[0] + "/addTrustedDevice"
         # Best effort: the code is validated, so the login stands either way;
-        # only the next login needs MFA again.
-        try:
-            trusted = await self._async_mfa_query(
-                trust_href, "POST", {"name": quote(device_name)}, x_token=x_token
-            )
-        except (
-            PulseAuthenticationError,
-            PulseClientConnectionError,
-            PulseServerConnectionError,
-            PulseServiceTemporarilyUnavailableError,
-        ):
-            trusted = {}
+        # only the next login needs MFA again. Names must be unique in the
+        # account (HTTP 409 otherwise), so retry once with a suffix.
+        trusted: dict = {}
+        unique = (
+            f"{device_name[: ADT_MAX_DEVICE_NAME_LENGTH - 5]} {secrets.token_hex(2)}"
+        )
+        for name in (device_name[:ADT_MAX_DEVICE_NAME_LENGTH], unique):
+            try:
+                trusted = await self._async_mfa_query(
+                    trust_href, "POST", {"name": quote(name)}, x_token=x_token
+                )
+            except _PulseMFACommandError as ex:
+                if ex.status == HTTPStatus.CONFLICT:
+                    continue
+            except (
+                PulseAuthenticationError,
+                PulseClientConnectionError,
+                PulseServerConnectionError,
+                PulseServiceTemporarilyUnavailableError,
+            ):
+                pass
+            break
         if trusted.get("detail") != "OK":
             LOG.warning("Pulse did not trust this device: %s", trusted)
         response = await self.async_query(

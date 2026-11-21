@@ -244,3 +244,47 @@ async def test_mfa_login_when_trust_fails(
     )
     assert await pc.async_submit_mfa_code("123456") is not None
     assert pc.is_connected
+
+
+@pytest.mark.asyncio
+async def test_mfa_trust_name_taken(mocked_server_responses, get_mocked_url, read_file):
+    """A device name already used in the account is retried with a suffix."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, VALIDATE_OTP_HREF),
+        {"code": 0, "detail": X_TOKEN},
+        method="POST",
+    )
+    # what Pulse sends when the name is already a trusted device
+    taken = {"code": 409, "detail": "That name is taken. Please enter a unique name."}
+    mocked.add(
+        _proxy(get_mocked_url, TRUST_HREF), "POST", status=409, body=json.dumps(taken)
+    )
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, TRUST_HREF),
+        {"code": 0, "detail": "OK"},
+        method="POST",
+    )
+    add_custom_response(
+        mocked,
+        read_file,
+        get_mocked_url(ADT_POST_SIGNIN_URI),
+        status=302,
+        headers={"Location": get_mocked_url(ADT_SUMMARY_URI)},
+    )
+    assert await pc.async_submit_mfa_code("123456", "Home Assistant") is not None
+    names = [
+        c.kwargs["data"]["name"]
+        for c in _sent(mocked, "POST", _proxy(get_mocked_url, TRUST_HREF))
+    ]
+    assert names[0] == "Home%20Assistant"
+    assert len(names) == 2
+    assert names[1].startswith("Home%20Assistant%20")
+    assert len(names[1]) == len("Home%20Assistant%20") + 4
