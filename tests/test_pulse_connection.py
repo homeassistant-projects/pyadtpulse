@@ -5,10 +5,11 @@ import datetime
 
 import pytest
 
-from tests.conftest import LoginType, add_signin
-from pyadtpulse.const import DEFAULT_API_HOST
+from tests.conftest import LoginType, add_signin, add_custom_response
+from pyadtpulse.const import ADT_LOGIN_URI, ADT_SUMMARY_URI, DEFAULT_API_HOST
 from pyadtpulse.exceptions import (
     PulseMFARequiredError,
+    PulseNotLoggedInError,
     PulseAccountLockedError,
     PulseAuthenticationError,
     PulseServerConnectionError,
@@ -297,3 +298,93 @@ async def test_only_single_login(mocked_server_responses, get_mocked_url, read_f
     await task1
     assert not pc.login_in_progress
     assert pc.is_connected
+
+
+OTHER_API_VERSION = "31.0.0-39"
+
+
+def _other_version_url(uri: str) -> str:
+    return f"{DEFAULT_API_HOST}/myhome/{OTHER_API_VERSION}{uri}"
+
+
+@pytest.mark.asyncio
+async def test_login_redirected_to_other_api_version(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """
+    Test a login that Pulse answers from a different API version.
+
+    Pulse runs more than one API version at once, so a sign-in posted to one
+    version can redirect into the summary page of another. That is a
+    successful login, and the new version should be used from then on.
+    """
+    pc = setup_pulse_connection()
+    add_custom_response(
+        mocked_server_responses,
+        read_file,
+        get_mocked_url(ADT_LOGIN_URI),
+        method="POST",
+        status=307,
+        headers={"Location": _other_version_url(ADT_SUMMARY_URI)},
+    )
+    add_custom_response(
+        mocked_server_responses,
+        read_file,
+        _other_version_url(ADT_SUMMARY_URI),
+        file_name="summary.html",
+    )
+    tree = await pc.async_do_login_query()
+    assert tree is not None
+    assert pc.is_connected
+    assert pc._connection_properties.api_version == OTHER_API_VERSION
+
+
+@pytest.mark.asyncio
+async def test_login_error_on_other_api_version(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """
+    Test a failed login that lands on another API version's sign-in page.
+
+    The error on the page should decide the exception, not a generic
+    "unexpected response" authentication error.
+    """
+    pc = setup_pulse_connection()
+    signin = _other_version_url(f"{ADT_LOGIN_URI}?e=ns&partner=adt")
+    add_custom_response(
+        mocked_server_responses,
+        read_file,
+        get_mocked_url(ADT_LOGIN_URI),
+        method="POST",
+        status=307,
+        headers={"Location": signin},
+    )
+    add_custom_response(
+        mocked_server_responses, read_file, signin, file_name="not_signed_in.html"
+    )
+    with pytest.raises(PulseNotLoggedInError):
+        await pc.async_do_login_query()
+    assert not pc.is_connected
+
+
+@pytest.mark.asyncio
+async def test_waiting_query_uses_version_adopted_by_login(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """A query waiting for login is sent to the version that login landed on."""
+    pc = setup_pulse_connection()
+    pc._connection_properties.api_version = "27.0.0-140"
+    add_custom_response(
+        mocked_server_responses,
+        read_file,
+        _other_version_url(ADT_SUMMARY_URI),
+        file_name="summary.html",
+    )
+    query = asyncio.create_task(pc.async_query(ADT_SUMMARY_URI))
+    await asyncio.sleep(0)
+    assert not query.done()  # waiting for the authenticated flag
+    pc._connection_properties.api_version = OTHER_API_VERSION
+    pc._connection_status.authenticated_flag.set()
+    status, _, url = await query
+    assert status == 200
+    assert str(url) == _other_version_url(ADT_SUMMARY_URI)
