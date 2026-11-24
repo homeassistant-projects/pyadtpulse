@@ -14,7 +14,7 @@ from time import time
 from asyncio import AbstractEventLoop
 from urllib.parse import quote
 
-from lxml import html
+from lxml import html, etree
 from yarl import URL
 from aiohttp import ClientError, ClientTimeout
 from typeguard import typechecked
@@ -63,9 +63,6 @@ class _PulseMFACommandError(PulseAuthenticationError):
         self.status = status
 
 
-SESSION_COOKIES = {"X-mobile-browser": "false", "ICLocal": "en_US"}
-
-
 class PulseConnection(PulseQueryManager):
     """ADT Pulse connection related attributes."""
 
@@ -96,8 +93,6 @@ class PulseConnection(PulseQueryManager):
         self._pc_attribute_lock = set_debug_lock(
             debug_locks, "pyadtpulse.pc_attribute_lock"
         )
-        self._connection_properties = pulse_connection_properties
-        self._connection_status = pulse_connection_status
         self._authentication_properties = pulse_authentication
         self._login_backoff = PulseBackoff(
             "Login",
@@ -106,7 +101,6 @@ class PulseConnection(PulseQueryManager):
         )
         self._login_in_progress = False
         self._mfa_challenge: PulseMFAChallenge | None = None
-        self._debug_locks = debug_locks
 
     @typechecked
     def check_login_errors(
@@ -133,13 +127,14 @@ class PulseConnection(PulseQueryManager):
         """
 
         def extract_seconds_from_string(s: str) -> int:
-            seconds = 0
-            match = re.search(r"\d+", s)
-            if match:
-                seconds = int(match.group())
-                if "minutes" in s:
-                    seconds *= 60
-            return seconds
+            """Return the lockout in seconds from "Try again in 30 minutes"."""
+            match = re.search(
+                r"Try again in\s*(\d+)\s*(second|minute|hour)?", s, re.IGNORECASE
+            )
+            if not match:
+                return 0
+            unit = (match.group(2) or "second").lower()
+            return int(match.group(1)) * {"second": 1, "minute": 60, "hour": 3600}[unit]
 
         def determine_error_type(tree: html.HtmlElement) -> None:
             """
@@ -147,7 +142,6 @@ class PulseConnection(PulseQueryManager):
 
             Will raise the appropriate exception.
             """
-            self._login_in_progress = False
             if response_uri.startswith(ADT_LOGIN_URI):
                 error = tree.find(
                     path=".//div[@id='warnMsgContents']",
@@ -164,7 +158,7 @@ class PulseConnection(PulseQueryManager):
                             )
                     elif "You have not yet signed in" in error_text:
                         raise PulseNotLoggedInError()
-                    elif "Sign In Unsuccessful" in error_text:
+                    elif "sign in unsuccessful" in error_text.lower():
                         raise PulseAuthenticationError()
                 else:
                     LOG.error("Unknown error logging into pulse: no message given")
@@ -173,13 +167,21 @@ class PulseConnection(PulseQueryManager):
                 self._mfa_challenge = PulseMFAChallenge.from_page(response[1])
                 raise PulseMFARequiredError(self._mfa_challenge)
 
-        tree = make_etree(
-            response[0],
-            response[1],
-            response[2],
-            logging.ERROR,
-            "Could not log into ADT Pulse site",
-        )
+        try:
+            tree = make_etree(
+                response[0],
+                response[1],
+                response[2],
+                logging.ERROR,
+                "Could not log into ADT Pulse site",
+            )
+        except etree.ParserError as ex:
+            # such as an empty body with HTTP 200
+            raise PulseServerConnectionError(
+                f"Could not parse ADT Pulse login response: code {response[0]}: "
+                f"URL: {response[2]}: {ex}",
+                self._login_backoff,
+            ) from ex
         # this probably should have been handled by async_query()
         if tree is None:
             raise PulseServerConnectionError(
@@ -247,45 +249,52 @@ class PulseConnection(PulseQueryManager):
                 (which is probably an internal error)
 
         """
-        if self.login_in_progress:
-            return None
-        await self.quick_logout()
-        # just raise exceptions if we're not going to be able to log in
-        lockout_time = self._login_backoff.expiration_time
-        if lockout_time > time():
-            raise PulseAccountLockedError(self._login_backoff, lockout_time)
-        cs_backoff = self._connection_status.get_backoff()
-        lockout_time = cs_backoff.expiration_time
-        if lockout_time > time():
-            raise PulseServiceTemporarilyUnavailableError(cs_backoff, lockout_time)
-        self.login_in_progress = True
-        data = {
-            "usernameForm": self._authentication_properties.username,
-            "passwordForm": self._authentication_properties.password,
-            "fingerprint": self._authentication_properties.fingerprint,
-        }
-        if self._authentication_properties.site_id:
-            data["networkid"] = self._authentication_properties.site_id
-        await self._login_backoff.wait_for_backoff()
+        # Check and set the flag with no await in between, so a second caller
+        # (such as the keepalive and sync tasks at once) returns instead of
+        # closing the session the first one is logging in with.
+        with self._pc_attribute_lock:
+            if self._login_in_progress:
+                return None
+            self._login_in_progress = True
         try:
-            response = await self.async_query(
-                ADT_LOGIN_URI,
-                "POST",
-                extra_params=data,
-                timeout=timeout,
-                requires_authentication=False,
-            )
-        except (
-            PulseClientConnectionError,
-            PulseServerConnectionError,
-            PulseServiceTemporarilyUnavailableError,
-        ) as e:
-            LOG.error("Could not log into Pulse site: %s", e)
+            await self.quick_logout()
+            # just raise exceptions if we're not going to be able to log in
+            lockout_time = self._login_backoff.expiration_time
+            if lockout_time > time():
+                raise PulseAccountLockedError(self._login_backoff, lockout_time)
+            cs_backoff = self._connection_status.get_backoff()
+            lockout_time = cs_backoff.expiration_time
+            if lockout_time > time():
+                raise PulseServiceTemporarilyUnavailableError(cs_backoff, lockout_time)
+            data = {
+                "usernameForm": self._authentication_properties.username,
+                "passwordForm": self._authentication_properties.password,
+                "fingerprint": self._authentication_properties.fingerprint,
+            }
+            if self._authentication_properties.site_id:
+                data["networkid"] = self._authentication_properties.site_id
+            await self._login_backoff.wait_for_backoff()
+            try:
+                response = await self.async_query(
+                    ADT_LOGIN_URI,
+                    "POST",
+                    extra_params=data,
+                    timeout=timeout,
+                    requires_authentication=False,
+                )
+            except (
+                PulseClientConnectionError,
+                PulseServerConnectionError,
+                PulseServiceTemporarilyUnavailableError,
+            ) as e:
+                LOG.error("Could not log into Pulse site: %s", e)
+                raise
+            tree = self.check_login_errors(response)
+            self._login_succeeded()
+            return tree
+        finally:
+            # whatever happened, including cancellation, this login is over
             self.login_in_progress = False
-            raise
-        tree = self.check_login_errors(response)
-        self._login_succeeded()
-        return tree
 
     def _login_succeeded(self) -> None:
         self._mfa_challenge = None
@@ -533,7 +542,14 @@ class PulseConnection(PulseQueryManager):
 
     @typechecked
     async def async_do_logout_query(self, site_id: str | None = None) -> None:
-        """Perform a logout query to the ADT Pulse site."""
+        """
+        Perform a logout query to the ADT Pulse site, then close the session.
+
+        Args:
+            site_id (str, optional): the site to log out of. If given, it also
+                replaces the site id stored in the authentication properties.
+
+        """
         params = {}
         si = ""
         self._connection_status.authenticated_flag.clear()
@@ -557,6 +573,10 @@ class PulseConnection(PulseQueryManager):
             PulseServerConnectionError,
         ) as e:
             LOG.debug("Could not logout from Pulse site: %s", e)
+        finally:
+            # the next login opens a new session; don't leak this one's sockets
+            self._mfa_challenge = None
+            await self._connection_properties.clear_session()
 
     @property
     def is_connected(self) -> bool:
