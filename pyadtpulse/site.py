@@ -11,12 +11,8 @@ from typeguard import typechecked
 
 from .util import make_etree, remove_prefix, parse_pulse_datetime
 from .const import ADT_DEVICE_URI, ADT_SYSTEM_URI, ADT_GATEWAY_URI, ADT_GATEWAY_STRING
-from .zones import ADTPulseZones
 from .exceptions import (
     PulseGatewayOfflineError,
-    PulseClientConnectionError,
-    PulseServerConnectionError,
-    PulseServiceTemporarilyUnavailableError,
 )
 from .site_properties import ADTPulseSiteProperties
 from .pulse_connection import PulseConnection
@@ -280,45 +276,6 @@ class ADTPulseSite(ADTPulseSiteProperties):
         await gather(*task_list)
         self._last_updated = int(time())
         return True
-
-    async def _async_update_zones_as_dict(
-        self, tree: html.HtmlElement | None
-    ) -> ADTPulseZones | None:
-        """
-        Update zone status information asynchronously.
-
-        Returns:
-            ADTPulseZones: a dictionary of zones with status
-            None if an error occurred
-
-        Raises:
-            PulseGatewayOffline: If the gateway is offline.
-
-        """
-        with self._site_lock:
-            if self._zones is None:
-                self._site_lock.release()
-                raise RuntimeError("No zones exist")
-            LOG.debug("fetching zones for site %s", self._id)
-            if not tree:
-                # call ADT orb uri
-                try:
-                    tree = await self._pulse_connection.query_orb(
-                        logging.WARNING, "Could not fetch zone status updates"
-                    )
-                except (
-                    PulseServiceTemporarilyUnavailableError,
-                    PulseServerConnectionError,
-                    PulseClientConnectionError,
-                ) as ex:
-                    LOG.warning(
-                        "Could not fetch zone status updates from orb: %s", ex.args[0]
-                    )
-                    return None
-            if tree is None:
-                return None
-            self.update_zone_from_etree(tree)
-        return self._zones
 
     def update_zone_from_etree(self, tree: html.HtmlElement) -> set[int]:  # noqa: PLR0912, PLR0915
         """

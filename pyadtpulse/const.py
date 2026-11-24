@@ -18,11 +18,9 @@ ADT_LOGOUT_URI = "/access/signout.jsp"
 ADT_MFA_FAIL_URI = "/mfa/mfaSignIn.jsp?workflow=challenge"
 
 ADT_SUMMARY_URI = "/summary/summary.jsp"
-ADT_ZONES_URI = "/ajax/homeViewDevAjax.jsp"
 ADT_ORB_URI = "/ajax/orb.jsp"
 ADT_SYSTEM_URI = "/system/system.jsp"
 ADT_DEVICE_URI = "/system/device.jsp"
-ADT_STATES_URI = "/ajax/currentStates.jsp"
 ADT_GATEWAY_URI = "/system/gateway.jsp"
 ADT_SYNC_CHECK_URI = "/Ajax/SyncCheckServ"
 ADT_TIMEOUT_URI = "/KeepAlive"
@@ -60,25 +58,13 @@ ADT_DEFAULT_SEC_FETCH_HEADERS = {
 ADT_OTHER_HTTP_ACCEPT_HEADERS = {
     "Accept": "*/*",
 }
-ADT_ARM_URI = "/quickcontrol/serv/RunRRACommand"
 ADT_ARM_DISARM_URI = "/quickcontrol/armDisarm.jsp"
 
 ADT_SYSTEM_SETTINGS = "/system/settings.jsp"
 
 ADT_HTTP_BACKGROUND_URIS = (ADT_ORB_URI, ADT_SYNC_CHECK_URI)
 STATE_OK = "OK"
-STATE_OPEN = "Open"
-STATE_MOTION = "Motion"
-STATE_TAMPER = "Tamper"
-STATE_ALARM = "Alarm"
-STATE_UNKNOWN = "Unknown"
 STATE_ONLINE = "Online"
 
-ADT_SENSOR_DOOR = "doorWindow"
-ADT_SENSOR_WINDOW = "glass"
-ADT_SENSOR_MOTION = "motion"
-ADT_SENSOR_SMOKE = "smoke"
-ADT_SENSOR_CO = "co"
-ADT_SENSOR_ALARM = "alarm"
 
 ADT_DEFAULT_LOGIN_TIMEOUT = 30

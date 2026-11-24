@@ -47,14 +47,14 @@ class PulseConnectionStatus:
 
     @property
     def retry_after(self) -> float:
-        """Get the number of seconds to wait before retrying HTTP requests."""
+        """Get the time (Unix timestamp) after which HTTP requests can be retried."""
         with self._pcs_attribute_lock:
             return self._backoff.expiration_time
 
     @retry_after.setter
     @typechecked
     def retry_after(self, seconds: float) -> None:
-        """Set time after which HTTP requests can be retried."""
+        """Set the time (Unix timestamp) after which HTTP requests can be retried."""
         with self._pcs_attribute_lock:
             self._backoff.set_absolute_backoff_time(seconds)
 

@@ -1,6 +1,4 @@
-"""Test suite for ADTPulseZoneData and ADTPulseFlattendZone classes."""
-
-from datetime import datetime
+"""Test suite for ADTPulseZoneData and ADTPulseFlattenedZone classes."""
 
 import pytest
 from typeguard import TypeCheckError
@@ -9,7 +7,7 @@ from pyadtpulse.zones import (
     ADT_NAME_TO_DEFAULT_TAGS,
     ADTPulseZones,
     ADTPulseZoneData,
-    ADTPulseFlattendZone,
+    ADTPulseFlattenedZone,
 )
 
 
@@ -233,9 +231,9 @@ class TestADTPulseZoneData:
         assert result == state
 
 
-class TestADTPulseFlattendZone:
+class TestADTPulseFlattenedZone:
     """
-    Test suite for ADTPulseFlattendZone class.
+    Test suite for ADTPulseFlattenedZone class.
 
     Tests initialization, attribute access, and modification of flattened zone data.
     """
@@ -256,7 +254,7 @@ class TestADTPulseFlattendZone:
         last_activity_timestamp = 1234567890
 
         # Act
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -289,7 +287,7 @@ class TestADTPulseFlattendZone:
         status = "Online"
         state = "Opened"
         last_activity_timestamp = 1234567890
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -322,7 +320,7 @@ class TestADTPulseFlattendZone:
         status = "Online"
         state = "Opened"
         last_activity_timestamp = 1234567890
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -358,191 +356,6 @@ class TestADTPulseFlattendZone:
         assert zone_obj["state"] == new_state
         assert zone_obj["last_activity_timestamp"] == new_last_activity_timestamp
 
-    def test_non_integer_zone(self):
-        """
-        Test zone value type validation.
-
-        Verifies that instance creation with non-integer zone value succeeds.
-        """
-        # Arrange
-        zone = "1"
-        name = "Zone 1"
-        id_ = "zone1"
-        tags = ("sensor1", "type1")
-        status = "Online"
-        state = "Opened"
-        last_activity_timestamp = 1234567890
-
-        # Act & Assert
-        ADTPulseFlattendZone(
-            zone=zone,  # type: ignore
-            name=name,
-            id_=id_,
-            tags=tags,
-            status=status,
-            state=state,
-            last_activity_timestamp=last_activity_timestamp,
-        )
-
-    def test_empty_name(self):
-        """
-        Test empty name validation.
-
-        Verifies that instance creation with empty name value succeeds.
-        """
-        # Arrange
-        zone = 1
-        name = ""
-        id_ = "zone1"
-        tags = ("sensor1", "type1")
-        status = "Online"
-        state = "Opened"
-        last_activity_timestamp = 1234567890
-
-        # Act & Assert
-        ADTPulseFlattendZone(
-            zone=zone,
-            name=name,
-            id_=id_,
-            tags=tags,
-            status=status,
-            state=state,
-            last_activity_timestamp=last_activity_timestamp,
-        )
-
-    def test_empty_id(self):
-        """
-        Test empty ID validation.
-
-        Verifies that instance creation with empty ID value succeeds.
-        """
-        # Arrange
-        zone = 1
-        name = "Zone 1"
-        id_ = ""
-        tags = ("sensor1", "type1")
-        status = "Online"
-        state = "Opened"
-        last_activity_timestamp = 1234567890
-
-        # Act
-        ADTPulseFlattendZone(
-            zone=zone,
-            name=name,
-            id_=id_,
-            tags=tags,
-            status=status,
-            state=state,
-            last_activity_timestamp=last_activity_timestamp,
-        )
-
-        # Assert
-        assert True
-
-    def test_non_string_tags(self):
-        """
-        Test tags value type validation.
-
-        Verifies that instance creation with non-string tag values succeeds.
-        """
-        # Arrange
-        zone = 1
-        name = "Zone 1"
-        id_ = "zone1"
-        tags = ("sensor1", 2)
-        status = "Online"
-        state = "Opened"
-        last_activity_timestamp = 1234567890
-
-        # Act & Assert
-        ADTPulseFlattendZone(
-            zone=zone,
-            name=name,
-            id_=id_,
-            tags=tags,
-            status=status,
-            state=state,
-            last_activity_timestamp=last_activity_timestamp,
-        )
-
-    def test_non_string_status(self):
-        """
-        Test status value type validation.
-
-        Verifies that instance creation with non-string status value succeeds.
-        """
-        # Arrange
-        zone = 1
-        name = "Zone 1"
-        id_ = "zone1"
-        tags = ("sensor1", "type1")
-        status = 1
-        state = "Opened"
-        last_activity_timestamp = 1234567890
-
-        # Act & Assert
-        ADTPulseFlattendZone(
-            zone=zone,
-            name=name,
-            id_=id_,
-            tags=tags,
-            status=status,  # type: ignore
-            state=state,
-            last_activity_timestamp=last_activity_timestamp,
-        )
-
-    def test_non_string_state(self):
-        """
-        Test state value type validation.
-
-        Verifies that instance creation with non-string state value succeeds.
-        """
-        # Arrange
-        zone = 1
-        name = "Zone 1"
-        id_ = "zone1"
-        tags = ("sensor1", "type1")
-        status = "Online"
-        state = 1
-        last_activity_timestamp = 1234567890
-
-        # Act & Assert
-        ADTPulseFlattendZone(
-            zone=zone,
-            name=name,
-            id_=id_,
-            tags=tags,
-            status=status,
-            state=state,  # type: ignore
-            last_activity_timestamp=last_activity_timestamp,
-        )
-
-    def test_non_integer_last_activity_timestamp(self):
-        """
-        Test timestamp value type validation.
-
-        Verifies that instance creation with non-integer timestamp succeeds.
-        """
-        # Arrange
-        zone = 1
-        name = "Zone 1"
-        id_ = "zone1"
-        tags = ("sensor1", "type1")
-        status = "Online"
-        state = "Opened"
-        last_activity_timestamp = "1234567890"
-
-        # Act & Assert
-        ADTPulseFlattendZone(
-            zone=zone,
-            name=name,
-            id_=id_,
-            tags=tags,
-            status=status,
-            state=state,
-            last_activity_timestamp=last_activity_timestamp,  # type: ignore
-        )
-
     def test_large_zone_fixed(self):
         """
         Test large zone value handling.
@@ -559,7 +372,7 @@ class TestADTPulseFlattendZone:
         last_activity_timestamp = 1234567890
 
         # Act
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -586,7 +399,7 @@ class TestADTPulseFlattendZone:
         """
         # Arrange
         zone = 1
-        name = "This is a very long name that exceeds the maximum length allowed for the 'name' attribute in ADTPulseFlattendZone"  # noqa: E501
+        name = "This is a very long name that exceeds the maximum length allowed for the 'name' attribute in ADTPulseFlattenedZone"  # noqa: E501
         id_ = "zone1"
         tags = ("sensor1", "type1")
         status = "Online"
@@ -594,7 +407,7 @@ class TestADTPulseFlattendZone:
         last_activity_timestamp = 1234567890
 
         # Act
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -629,7 +442,7 @@ class TestADTPulseFlattendZone:
         last_activity_timestamp = 1234567890
 
         # Act
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -650,9 +463,9 @@ class TestADTPulseFlattendZone:
 
     def test_create_instance_with_multiple_tags_fixed(self):
         """
-        ADTPulseFlattendZone test.
+        ADTPulseFlattenedZone test.
 
-        Test that creating a new instance of ADTPulseFlattendZone with a tuple
+        Test that creating a new instance of ADTPulseFlattenedZone with a tuple
         that contains multiple strings for 'tags' successfully
         creates an object with the correct attributes.
         """
@@ -666,7 +479,7 @@ class TestADTPulseFlattendZone:
         last_activity_timestamp = 1234567890
 
         # Act
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -687,9 +500,9 @@ class TestADTPulseFlattendZone:
 
     def test_long_status_string_fixed(self):
         """
-        ADTPulseFlattendZone test.
+        ADTPulseFlattenedZone test.
 
-        Test that creating a new instance of ADTPulseFlattendZone
+        Test that creating a new instance of ADTPulseFlattenedZone
         with a very long string for 'status' successfully
         creates an object with the correct attributes.
         """
@@ -703,7 +516,7 @@ class TestADTPulseFlattendZone:
         last_activity_timestamp = 1234567890
 
         # Act
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -724,9 +537,9 @@ class TestADTPulseFlattendZone:
 
     def test_long_state_string_fixed(self):
         """
-        ADTPulseFlattendZone test.
+        ADTPulseFlattenedZone test.
 
-        Test that creating a new instance of ADTPulseFlattendZone
+        Test that creating a new instance of ADTPulseFlattenedZone
         with a very long string for 'state' successfully
         creates an object with the correct attributes.
         """
@@ -740,7 +553,7 @@ class TestADTPulseFlattendZone:
         last_activity_timestamp = 1234567890
 
         # Act
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -761,9 +574,9 @@ class TestADTPulseFlattendZone:
 
     def test_large_last_activity_timestamp_fixed(self):
         """
-        ADTPulseFlattendZone test.
+        ADTPulseFlattenedZone test.
 
-        Test that creating a new instance of ADTPulseFlattendZone
+        Test that creating a new instance of ADTPulseFlattenedZone
         with a very large integer value for 'last_activity_timestamp' successfully
         creates an object with the correct attributes.
         """
@@ -777,7 +590,7 @@ class TestADTPulseFlattendZone:
         last_activity_timestamp = 999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999  # noqa: E501
 
         # Act
-        zone_obj = ADTPulseFlattendZone(
+        zone_obj = ADTPulseFlattenedZone(
             zone=zone,
             name=name,
             id_=id_,
@@ -871,80 +684,6 @@ class TestADTPulseZones:
         assert zones[2].name == "Zone 2"
         assert zones[3].name == "Zone 3"
 
-    # ADTPulseZones can update zone status by its id
-    def test_update_zone_status(self):
-        """
-        Test zone status update.
-
-        Verifies that zone status can be updated for specific zone IDs.
-        """
-        # Arrange
-        zones = ADTPulseZones(
-            {
-                1: ADTPulseZoneData("Zone 1", "sensor-1"),
-                2: ADTPulseZoneData("Zone 2", "sensor-2"),
-                3: ADTPulseZoneData("Zone 3", "sensor-3"),
-            }
-        )
-
-        # Act
-        zones.update_status(1, "Online")
-        zones.update_status(2, "Low Battery")
-        zones.update_status(3, "Offline")
-
-        # Assert
-        assert zones[1].status == "Online"
-        assert zones[2].status == "Low Battery"
-        assert zones[3].status == "Offline"
-
-    # ADTPulseZones can update zone state by its id
-    def test_update_zone_state(self):
-        """Test that ADTPulseZones can update zone state by its id."""
-        # Arrange
-        zones = ADTPulseZones(
-            {
-                1: ADTPulseZoneData("Zone 1", "sensor-1"),
-                2: ADTPulseZoneData("Zone 2", "sensor-2"),
-                3: ADTPulseZoneData("Zone 3", "sensor-3"),
-            }
-        )
-
-        # Act
-        zones.update_state(1, "Opened")
-        zones.update_state(2, "Closed")
-        zones.update_state(3, "Unknown")
-
-        # Assert
-        assert zones[1].state == "Opened"
-        assert zones[2].state == "Closed"
-        assert zones[3].state == "Unknown"
-
-    # ADTPulseZones can update last activity timestamp by its id
-    def test_update_last_activity_timestamp(self):
-        """Test that ADTPulseZones can update last activity timestamp by its id."""
-        # Arrange
-        zones = ADTPulseZones(
-            {
-                1: ADTPulseZoneData("Zone 1", "sensor-1"),
-                2: ADTPulseZoneData("Zone 2", "sensor-2"),
-                3: ADTPulseZoneData("Zone 3", "sensor-3"),
-            }
-        )
-
-        # Act
-        dt_1 = datetime(2022, 1, 1, 12, 0, 0)
-        dt_2 = datetime(2022, 1, 2, 12, 0, 0)
-        dt_3 = datetime(2022, 1, 3, 12, 0, 0)
-
-        zones.update_last_activity_timestamp(1, dt_1)
-        zones.update_last_activity_timestamp(2, dt_2)
-        zones.update_last_activity_timestamp(3, dt_3)
-
-        # Assert
-        assert zones[1].last_activity_timestamp == int(dt_1.timestamp())
-        assert zones[2].last_activity_timestamp == int(dt_2.timestamp())
-        assert zones[3].last_activity_timestamp == int(dt_3.timestamp())
-
     # ADTPulseZones can update device info by its id
     def test_update_device_info_by_id(self):
         """
@@ -1011,13 +750,13 @@ class TestADTPulseZones:
         with pytest.raises(KeyError):
             zones[invalid_key]  # type: ignore
 
-    # ADTPulseZones can flatten its data into a list of ADTPulseFlattendZone
+    # ADTPulseZones can flatten its data into a list of ADTPulseFlattenedZone
     def test_flatten_method(self):
         """
         ADTPulseZones test.
 
         Test that ADTPulseZones can flatten
-        its data into a list of ADTPulseFlattendZone.
+        its data into a list of ADTPulseFlattenedZone.
         """
         # Arrange
         zones = ADTPulseZones()
@@ -1213,28 +952,6 @@ class TestADTPulseZones:
 
         # Assert
         assert len(zones) == 0
-
-    # ADTPulseZones can handle invalid datetime when updating last activity timestamp
-    def test_handle_invalid_datetime(self):
-        """
-        ADTPulseZones test.
-
-        Test that ADTPulseZones can handle
-        invalid datetime when updating last activity timestamp.
-        """
-        # Arrange
-        zones = ADTPulseZones()
-        zones[1] = ADTPulseZoneData("name", "id")
-        key = 1
-        invalid_dt = "2022-13-01 12:00:00"  # Invalid datetime format
-
-        # Act
-        with pytest.raises(ValueError):
-            dt = datetime.strptime(invalid_dt, "%Y-%m-%d %H:%M:%S")
-            zones.update_last_activity_timestamp(key, dt)
-
-        # Assert
-        assert zones[key].last_activity_timestamp == 0
 
     # ADTPulseZones can handle missing name when updating zone attributes
     def test_handle_missing_name_when_updating_zone_attributes(self):

@@ -46,11 +46,15 @@ class TestPulseConnectionStatus:
         pcs = PulseConnectionStatus()
         assert isinstance(pcs.get_backoff(), PulseBackoff)
 
-    # increment_backoff can be called without errors
+    # increment_backoff starts a backoff
     def test_increment_backoff(self):
-        """Test that increment_backoff can be called without errors."""
+        """Test that increment_backoff starts a backoff."""
         pcs = PulseConnectionStatus()
-        pcs.get_backoff().increment_backoff()
+        backoff = pcs.get_backoff()
+        assert backoff.get_current_backoff_interval() == 0
+        backoff.increment_backoff()
+        assert backoff.backoff_count == 1
+        assert backoff.get_current_backoff_interval() > 0
 
     # retry_after can be set to a time in the future
     def test_set_retry_after_past_time_fixed(self):
@@ -116,11 +120,15 @@ class TestPulseConnectionStatus:
         pcs.retry_after = retry_after_time
         assert pcs.retry_after == retry_after_time
 
-    # reset_backoff can be called without errors
+    # reset_backoff clears a backoff
     def test_reset_backoff(self):
-        """Test that reset_backoff can be called without errors."""
+        """Test that reset_backoff clears a backoff."""
         pcs = PulseConnectionStatus()
-        pcs.get_backoff().reset_backoff()
+        backoff = pcs.get_backoff()
+        backoff.increment_backoff()
+        backoff.reset_backoff()
+        assert backoff.backoff_count == 0
+        assert backoff.get_current_backoff_interval() == 0
 
     # authenticated_flag can be set to True
     def test_authenticated_flag_set_to_true(self):
