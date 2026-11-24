@@ -5,7 +5,7 @@ import logging
 from typing import Any
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from threading import RLock
-from dataclasses import field, dataclass
+from dataclasses import MISSING, field, fields, dataclass
 
 from typeguard import typechecked
 
@@ -24,10 +24,11 @@ STRING_UPDATEABLE_FIELDS = (
     "primary_connection_type",
     "broadband_connection_status",
     "cellular_connection_status",
-    "cellular_connection_signal_strength",
     "broadband_lan_mac",
     "device_lan_mac",
 )
+
+FLOAT_UPDATEABLE_FIELDS = ("cellular_connection_signal_strength",)
 
 DATETIME_UPDATEABLE_FIELDS = ("next_update", "last_update")
 
@@ -37,6 +38,12 @@ IPADDR_UPDATEABLE_FIELDS = (
     "router_lan_ip_address",
     "router_wan_ip_address",
 )
+
+# Attribute name -> key of the portal row, where the two differ.
+# The portal labels the row "Cellular Signal Strength".
+GATEWAY_ATTRIBUTE_KEYS = {
+    "cellular_connection_signal_strength": "cellular_signal_strength",
+}
 
 
 @dataclass(slots=True)
@@ -160,7 +167,7 @@ class ADTPulseGateway:
 
     @property
     def cellular_connection_signal_strength(self) -> float:
-        """Get current gateway MAC address."""
+        """Get current cellular signal strength (0.0 if unknown)."""
         return self._cellular_connection_signal_strength
 
     @cellular_connection_signal_strength.setter
@@ -168,14 +175,34 @@ class ADTPulseGateway:
     def cellular_connection_signal_strength(
         self, new_signal_strength: float | None
     ) -> None:
-        """Set gateway MAC address."""
+        """Set cellular signal strength (None means unknown)."""
         if not new_signal_strength:
             new_signal_strength = 0.0
         self._cellular_connection_signal_strength = new_signal_strength
 
+    @classmethod
+    def _default_value(cls, attribute: str) -> Any:
+        """Return the dataclass default of an updateable attribute."""
+        for f in fields(cls):
+            if f.name in (attribute, f"_{attribute}"):
+                if f.default is not MISSING:
+                    return f.default
+                if f.default_factory is not MISSING:
+                    return f.default_factory()
+        raise AttributeError(f"No dataclass field for {attribute}")
+
+    @staticmethod
+    def _parse_float(value: str) -> float | None:
+        """Parse a number such as "-75", "-75 dBm" or "4.5"; None if there is none."""
+        match = re.search(r"-?\d+(?:\.\d+)?", value)
+        return float(match.group(0)) if match else None
+
     def set_gateway_attributes(self, gateway_attributes: dict[str, str]) -> None:
         """
         Set gateway attributes from dictionary.
+
+        A value that is missing, empty or can't be parsed (such as "N/A")
+        resets the attribute to its default, so it keeps its declared type.
 
         Args:
             gateway_attributes (dict[str,str]): dictionary of gateway attributes
@@ -183,24 +210,31 @@ class ADTPulseGateway:
         """
         for i in (
             STRING_UPDATEABLE_FIELDS
+            + FLOAT_UPDATEABLE_FIELDS
             + IPADDR_UPDATEABLE_FIELDS
             + DATETIME_UPDATEABLE_FIELDS
         ):
-            temp: Any = gateway_attributes.get(i)
+            temp: Any = gateway_attributes.get(GATEWAY_ATTRIBUTE_KEYS.get(i, i))
             if temp == "":
                 temp = None
+            if temp is not None:
+                if i in IPADDR_UPDATEABLE_FIELDS:
+                    try:
+                        temp = ip_address(temp)
+                    except ValueError:
+                        temp = None
+                elif i in DATETIME_UPDATEABLE_FIELDS:
+                    try:
+                        temp = int(parse_pulse_datetime(temp).timestamp())
+                    except ValueError:
+                        temp = None
+                elif i in FLOAT_UPDATEABLE_FIELDS:
+                    temp = self._parse_float(temp)
             if temp is None:
-                setattr(self, i, None)
-                continue
-            if i in IPADDR_UPDATEABLE_FIELDS:
-                try:
-                    temp = ip_address(temp)
-                except ValueError:
-                    temp = None
-            elif i in DATETIME_UPDATEABLE_FIELDS:
-                try:
-                    temp = int(parse_pulse_datetime(temp).timestamp())
-                except ValueError:
-                    temp = None
-            if hasattr(self, i):
+                temp = self._default_value(i)
+            try:
                 setattr(self, i, temp)
+            except ValueError:
+                # e.g. a MAC address the setter rejects
+                LOG.debug("Ignoring invalid gateway %s value %s", i, temp)
+                setattr(self, i, self._default_value(i))
