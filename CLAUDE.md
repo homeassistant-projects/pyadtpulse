@@ -71,5 +71,6 @@ CI (`.github/workflows/`) runs the tests on Python 3.10 to 3.14, plus ruff
 - Pre-commit blocks commits to `master` (`no-commit-to-branch`), so work on a
   branch and open a PR against `master`.
 - Docstrings follow the Google convention (ruff `D` rules).
-- Releases: bump `version` in `pyproject.toml` in a PR, then push a tag named
-  exactly `X.Y.Z` (no `v`), which runs `pypi-publish.yml`.
+- Releases: bump the version in both `pyproject.toml` (`version`) and
+  `pyadtpulse/const.py` (`__version__`) in a PR, then push a tag named exactly
+  `X.Y.Z` (no `v`), which runs `pypi-publish.yml`.
