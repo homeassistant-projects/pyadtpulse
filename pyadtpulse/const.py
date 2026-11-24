@@ -1,6 +1,12 @@
 """Constants for pyadtpulse."""
 
-__version__ = "1.2.14"
+from importlib.metadata import PackageNotFoundError, version
+
+# The version is set only in pyproject.toml; read it from the installed package.
+try:
+    __version__ = version("pyadtpulse")
+except PackageNotFoundError:  # running from a source tree that isn't installed
+    __version__ = "0.0.0"
 
 DEFAULT_API_HOST = "https://portal.adtpulse.com"
 API_HOST_CA = "https://portal-ca.adtpulse.com"  # Canada
