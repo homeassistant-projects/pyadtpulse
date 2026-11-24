@@ -270,14 +270,16 @@ class PyADTPulseAsync:
             if self.site.gateway.next_update < time.time():
                 await self.site.set_device(ADT_GATEWAY_STRING)
 
+        # randint only adds jitter to the relogin and logout times, so it
+        # doesn't need a cryptographic generator (hence the noqa: S311).
         def should_relogin(relogin_interval: int) -> bool:
             return (
                 relogin_interval != 0
                 and time.time() - self._authentication_properties.last_login_time
-                > randint(int(0.75 * relogin_interval), relogin_interval)
+                > randint(int(0.75 * relogin_interval), relogin_interval)  # noqa: S311
             )
 
-        next_full_logout_time = time.time() + randint(
+        next_full_logout_time = time.time() + randint(  # noqa: S311
             int(0.75 * FULL_LOGOUT_INTERVAL), FULL_LOGOUT_INTERVAL
         )
         response: str | None
@@ -313,7 +315,7 @@ class PyADTPulseAsync:
                                 )
                             await self._sync_check_sleeping.wait()
                     if msg == "full":
-                        next_full_logout_time = time.time() + randint(
+                        next_full_logout_time = time.time() + randint(  # noqa: S311
                             int(0.75 * FULL_LOGOUT_INTERVAL), FULL_LOGOUT_INTERVAL
                         )
                         await self.async_logout()
