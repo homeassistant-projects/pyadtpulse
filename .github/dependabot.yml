@@ -12,6 +12,18 @@ updates:
     groups:
       python-minor-patch:
         update-types: [minor, patch]
+    # Deliberate test-only caps in the testing group of pyproject.toml. Without
+    # these, Dependabot raises the caps and the tests break. Remove each entry
+    # together with its cap.
+    ignore:
+      # aiohttp<3.14: aioresponses can't mock aiohttp 3.14 responses
+      # (pnuckowski/aioresponses#289).
+      - dependency-name: aiohttp
+        versions: [">=3.14"]
+      # pytest<9.2: pytest-isolate 0.0.17 breaks on pytest 9.2. Drop the cap
+      # and this entry once pytest-isolate 0.0.18 clears the 2-day cooldown.
+      - dependency-name: pytest
+        versions: [">=9.2"]
 
   # Actions are pinned to commit SHAs; Dependabot bumps the SHA and the
   # trailing "# vX.Y.Z" comment.
