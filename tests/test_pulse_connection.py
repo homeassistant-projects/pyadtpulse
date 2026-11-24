@@ -1,11 +1,15 @@
 """Test cases for PulseConnection class."""
 
 import asyncio
+import logging
 import datetime
+from time import time
+from unittest.mock import AsyncMock
 
 import pytest
+from yarl import URL
 
-from tests.conftest import LoginType, add_signin, add_custom_response
+from tests.conftest import LoginType, add_logout, add_signin, add_custom_response
 from pyadtpulse.const import ADT_LOGIN_URI, ADT_SUMMARY_URI, DEFAULT_API_HOST
 from pyadtpulse.exceptions import (
     PulseMFARequiredError,
@@ -13,7 +17,9 @@ from pyadtpulse.exceptions import (
     PulseAccountLockedError,
     PulseAuthenticationError,
     PulseServerConnectionError,
+    PulseServiceTemporarilyUnavailableError,
 )
+from pyadtpulse.pulse_backoff import PulseBackoff
 from pyadtpulse.pulse_connection import PulseConnection
 from pyadtpulse.pulse_connection_status import PulseConnectionStatus
 from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
@@ -411,3 +417,196 @@ async def test_login_error_on_unsupported_api_version(
     with pytest.raises(PulseNotLoggedInError):
         await pc.async_do_login_query()
     assert not pc.login_in_progress
+
+
+def _login_requests(mocked_server_responses) -> list:
+    """Return the sign-in POSTs the mocked server received."""
+    return [
+        key
+        for key in mocked_server_responses.requests
+        if key[0] == "POST" and str(key[1]).endswith(ADT_LOGIN_URI)
+    ]
+
+
+def _signin_page(message: str) -> str:
+    return f'<html><body><div id="warnMsgContents">{message}</div></body></html>'
+
+
+@pytest.mark.asyncio
+async def test_login_in_progress_cleared_on_value_error(mocker):
+    """A ValueError from setting up the query doesn't leave a login running."""
+    pc = setup_pulse_connection()
+    # no API version and none can be fetched: async_query raises ValueError
+    mocker.patch.object(PulseConnection, "async_fetch_version", AsyncMock())
+    with pytest.raises(ValueError):
+        await pc.async_do_login_query()
+    assert pc.login_in_progress is False
+
+
+@pytest.mark.asyncio
+async def test_login_in_progress_cleared_on_empty_response(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """An empty HTTP 200 sign-in answer is a server error, not a stuck login."""
+    pc = setup_pulse_connection()
+    add_custom_response(
+        mocked_server_responses,
+        read_file,
+        get_mocked_url(ADT_LOGIN_URI),
+        method="POST",
+        status=307,
+        headers={"Location": _other_version_url(ADT_SUMMARY_URI)},
+    )
+    # empty body: lxml raises ParserError
+    add_custom_response(
+        mocked_server_responses, read_file, _other_version_url(ADT_SUMMARY_URI)
+    )
+    with pytest.raises(PulseServerConnectionError):
+        await pc.async_do_login_query()
+    assert pc.login_in_progress is False
+
+
+@pytest.mark.asyncio
+async def test_login_in_progress_cleared_on_cancel(mocker):
+    """Cancelling a login while it waits clears the in-progress flag."""
+    pc = setup_pulse_connection()
+    never = asyncio.Event()
+    mocker.patch.object(PulseBackoff, "wait_for_backoff", side_effect=never.wait)
+    task = asyncio.create_task(pc.async_do_login_query())
+    for _ in range(5):
+        await asyncio.sleep(0)
+    assert pc.login_in_progress
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert pc.login_in_progress is False
+
+
+@pytest.mark.asyncio
+async def test_concurrent_login_does_not_close_first_session(mocker):
+    """A login started while another one is resetting the session returns."""
+    pc = setup_pulse_connection()
+    release = asyncio.Event()
+    entered = asyncio.Event()
+
+    async def slow_clear_session() -> None:
+        entered.set()
+        await release.wait()
+
+    clear = mocker.patch.object(
+        PulseConnectionProperties, "clear_session", side_effect=slow_clear_session
+    )
+    mocker.patch.object(
+        PulseBackoff, "wait_for_backoff", side_effect=asyncio.Event().wait
+    )
+    first = asyncio.create_task(pc.async_do_login_query())
+    await entered.wait()
+    # the first login is suspended inside quick_logout
+    # before the fix it also reset the session, waiting here forever
+    assert await asyncio.wait_for(pc.async_do_login_query(), timeout=1) is None
+    assert clear.call_count == 1
+    first.cancel()
+    release.set()
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    assert pc.login_in_progress is False
+
+
+@pytest.mark.asyncio
+async def test_check_login_errors_leaves_login_in_progress(get_mocked_url, read_file):
+    """Classifying a response must not clear another caller's login flag."""
+    pc = setup_pulse_connection()
+    pc.login_in_progress = True
+    with pytest.raises(PulseNotLoggedInError):
+        pc.check_login_errors(
+            (200, read_file("not_signed_in.html"), URL(get_mocked_url(ADT_LOGIN_URI)))
+        )
+    assert pc.login_in_progress is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("message", "seconds"),
+    [
+        ("Try again in 30 minutes.", 30 * 60),
+        ("Try again in 1 minute.", 60),
+        ("Try again in 1 hour.", 3600),
+        ("Try again in 2 hours.", 7200),
+        ("Try again in 45 seconds.", 45),
+        ("Sign In unsuccessful. Locked. Try again in 5 Minutes.", 300),
+    ],
+)
+async def test_account_lockout_time_units(
+    get_mocked_url, freeze_time_to_now, message, seconds
+):
+    """The lockout time on the sign-in page is read in its own unit."""
+    pc = setup_pulse_connection()
+    with pytest.raises(PulseAccountLockedError) as exc:
+        pc.check_login_errors(
+            (200, _signin_page(message), URL(get_mocked_url(ADT_LOGIN_URI)))
+        )
+    assert exc.value.retry_time - time() == pytest.approx(seconds, abs=1)
+
+
+@pytest.mark.asyncio
+async def test_sign_in_unsuccessful_is_recognized(get_mocked_url, read_file, caplog):
+    """The portal's "Sign In unsuccessful." raises without the generic fallback."""
+    pc = setup_pulse_connection()
+    with caplog.at_level(logging.ERROR), pytest.raises(PulseAuthenticationError):
+        pc.check_login_errors(
+            (200, read_file("signin_fail.html"), URL(get_mocked_url(ADT_LOGIN_URI)))
+        )
+    assert "unexpected response" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_login_refused_during_login_backoff(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """A login while the account lockout lasts raises without a request."""
+    pc = setup_pulse_connection()
+    add_signin(LoginType.SUCCESS, mocked_server_responses, get_mocked_url, read_file)
+    pc._login_backoff.set_absolute_backoff_time(time() + 600)
+    with pytest.raises(PulseAccountLockedError):
+        await pc.async_do_login_query()
+    assert not _login_requests(mocked_server_responses)
+    assert pc.login_in_progress is False
+
+
+@pytest.mark.asyncio
+async def test_login_refused_during_retry_after(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """A login while a Retry-After is active raises without a request."""
+    pc = setup_pulse_connection()
+    add_signin(LoginType.SUCCESS, mocked_server_responses, get_mocked_url, read_file)
+    pc._connection_status.retry_after = time() + 600
+    with pytest.raises(PulseServiceTemporarilyUnavailableError):
+        await pc.async_do_login_query()
+    assert not _login_requests(mocked_server_responses)
+    assert pc.login_in_progress is False
+
+
+@pytest.mark.asyncio
+async def test_logout_closes_session(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """Logging out closes the aiohttp session."""
+    pc = setup_pulse_connection()
+    add_signin(LoginType.SUCCESS, mocked_server_responses, get_mocked_url, read_file)
+    await pc.async_do_login_query()
+    session = pc._connection_properties.session
+    add_logout(mocked_server_responses, get_mocked_url, read_file)
+    await pc.async_do_logout_query()
+    assert session.closed
+    assert not pc.is_connected
+
+
+@pytest.mark.asyncio
+async def test_logout_closes_session_when_query_fails(mock_server_down, mock_sleep):
+    """The session is closed even if Pulse can't be reached to log out."""
+    pc = setup_pulse_connection()
+    pc._connection_properties.api_version = OTHER_API_VERSION
+    session = pc._connection_properties.session
+    await pc.async_do_logout_query()
+    assert session.closed
