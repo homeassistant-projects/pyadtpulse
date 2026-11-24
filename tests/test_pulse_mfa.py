@@ -1,7 +1,9 @@
 """Test logging in through the Pulse MFA challenge."""
 
 import json
+import time
 import asyncio
+import logging
 
 import pytest
 from yarl import URL
@@ -20,10 +22,12 @@ from pyadtpulse.pulse_mfa import (
     PulseMFAChallenge,
 )
 from pyadtpulse.exceptions import (
+    PulseConnectionError,
     PulseMFARequiredError,
     PulseNotLoggedInError,
     PulseAuthenticationError,
     PulseServerConnectionError,
+    PulseServiceTemporarilyUnavailableError,
 )
 from tests.test_pulse_connection import setup_pulse_connection
 
@@ -383,3 +387,201 @@ async def test_mfa_retry_after_accepted_code_starts_over(
         await pc.async_submit_mfa_code("123456")
     with pytest.raises(PulseNotLoggedInError):
         await pc.async_submit_mfa_code("123456")
+
+
+@pytest.mark.parametrize("status", [500, 503])
+@pytest.mark.asyncio
+async def test_mfa_server_error_with_json_is_not_a_wrong_code(
+    mocked_server_responses, get_mocked_url, read_file, status
+):
+    """An HTTP 5xx with a JSON body while validating is a server error."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    mocked.add(
+        _proxy(get_mocked_url, VALIDATE_OTP_HREF),
+        "POST",
+        status=status,
+        body=json.dumps({"code": status, "detail": "Internal error"}),
+    )
+    with pytest.raises(PulseConnectionError) as exc:
+        await pc.async_submit_mfa_code("123456")
+    assert not isinstance(exc.value, PulseAuthenticationError)
+
+
+@pytest.mark.asyncio
+async def test_mfa_rate_limited_code_request(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """An HTTP 429 with a JSON body is a rate limit, not a refusal."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    mocked.add(
+        _proxy(get_mocked_url, REQUEST_OTP_HREF),
+        "POST",
+        status=429,
+        body=json.dumps({"code": 429, "detail": "Too many requests"}),
+    )
+    with pytest.raises(PulseServiceTemporarilyUnavailableError):
+        await pc.async_request_mfa_code()
+
+
+@pytest.mark.asyncio
+async def test_mfa_retry_after_is_honored_and_code_not_resent(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """A 503 with Retry-After is reported with its time, and nothing is resent."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    mocked.add(
+        _proxy(get_mocked_url, VALIDATE_OTP_HREF),
+        "POST",
+        status=503,
+        headers={"Retry-After": "120"},
+        body=json.dumps({"code": 503, "detail": "Service unavailable"}),
+    )
+    before = time.time()
+    with pytest.raises(PulseServiceTemporarilyUnavailableError) as exc:
+        await pc.async_submit_mfa_code("123456")
+    assert exc.value.retry_time is not None
+    assert exc.value.retry_time >= int(before) + 120
+    # the OTP was sent once, not retried
+    assert len(_sent(mocked, "POST", _proxy(get_mocked_url, VALIDATE_OTP_HREF))) == 1
+    # until the Retry-After time, nothing more is sent
+    with pytest.raises(PulseServiceTemporarilyUnavailableError):
+        await pc.async_submit_mfa_code("123456")
+    assert len(_sent(mocked, "GET", _proxy(get_mocked_url, ADT_MFA_STATE_HREF))) == 1
+
+
+@pytest.mark.asyncio
+async def test_mfa_login_when_trust_is_unavailable(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """A trust request answered with HTTP 503 does not undo the login."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, VALIDATE_OTP_HREF),
+        {"code": 0, "detail": X_TOKEN},
+        method="POST",
+    )
+    mocked.add(
+        _proxy(get_mocked_url, TRUST_HREF),
+        "POST",
+        status=503,
+        body=json.dumps({"code": 503, "detail": "Service unavailable"}),
+    )
+    add_custom_response(
+        mocked,
+        read_file,
+        get_mocked_url(ADT_POST_SIGNIN_URI),
+        status=302,
+        headers={"Location": get_mocked_url(ADT_SUMMARY_URI)},
+    )
+    assert await pc.async_submit_mfa_code("123456") is not None
+    assert pc.is_connected
+
+
+def test_proxy_url_is_encoded():
+    """The proxy URL encodes its query values, and keeps the current format."""
+    challenge = PulseMFAChallenge(pre_auth_token="t", login="l", sat=FIXTURE_SAT)
+    assert challenge.proxy_url(ADT_MFA_STATE_HREF) == (
+        f"/nga/serv/RunRRAProxy?href={ADT_MFA_STATE_HREF}&sat={FIXTURE_SAT}"
+    )
+    odd = PulseMFAChallenge(pre_auth_token="t", login="l", sat="a&b=c d+e")
+    query = URL(odd.proxy_url("rest/x?y=1&z")).query
+    assert query["href"] == "rest/x?y=1&z"
+    assert query["sat"] == "a&b=c d+e"
+
+
+@pytest.mark.asyncio
+async def test_mfa_rejected_code_logs_reply_without_otp(
+    mocked_server_responses, get_mocked_url, read_file, caplog
+):
+    """A code Pulse does not accept logs what came back, without the OTP."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    exc = await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    pre_auth_token = exc.challenge.pre_auth_token
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, VALIDATE_OTP_HREF),
+        {"code": 7, "detail": "Code 987654 expired", "echo": pre_auth_token},
+        method="POST",
+    )
+    with caplog.at_level(logging.ERROR), pytest.raises(PulseAuthenticationError):
+        await pc.async_submit_mfa_code("987654")
+    assert "expired" in caplog.text
+    assert "987654" not in caplog.text
+    assert pre_auth_token not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_mfa_code_not_sent_logs_reply_without_token(
+    mocked_server_responses, get_mocked_url, read_file, caplog
+):
+    """A code request Pulse does not confirm logs the reply, without the token."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    exc = await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    pre_auth_token = exc.challenge.pre_auth_token
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, REQUEST_OTP_HREF),
+        {"code": 1, "detail": "Not sent", "preAuthToken": pre_auth_token},
+        method="POST",
+    )
+    with caplog.at_level(logging.ERROR), pytest.raises(PulseAuthenticationError):
+        await pc.async_request_mfa_code()
+    assert "Not sent" in caplog.text
+    assert pre_auth_token not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_mfa_trust_refused_logs_reply_without_token(
+    mocked_server_responses, get_mocked_url, read_file, caplog
+):
+    """A trust request Pulse does not confirm logs the reply, without the X-token."""
+    mocked = mocked_server_responses
+    pc = setup_pulse_connection()
+    await _login_until_mfa(pc, mocked, get_mocked_url, read_file)
+    _add_json(mocked, read_file, _proxy(get_mocked_url, ADT_MFA_STATE_HREF), MFA_STATE)
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, VALIDATE_OTP_HREF),
+        {"code": 0, "detail": X_TOKEN},
+        method="POST",
+    )
+    _add_json(
+        mocked,
+        read_file,
+        _proxy(get_mocked_url, TRUST_HREF),
+        {"code": 3, "detail": "Device limit reached", "token": X_TOKEN},
+        method="POST",
+    )
+    add_custom_response(
+        mocked,
+        read_file,
+        get_mocked_url(ADT_POST_SIGNIN_URI),
+        status=302,
+        headers={"Location": get_mocked_url(ADT_SUMMARY_URI)},
+    )
+    with caplog.at_level(logging.WARNING):
+        assert await pc.async_submit_mfa_code("123456") is not None
+    assert "Device limit reached" in caplog.text
+    assert X_TOKEN not in caplog.text
+    assert "sig=" not in caplog.text
