@@ -3,6 +3,8 @@ repos:
     -   id: check-yaml
     -   id: check-toml
     -   id: check-json
+        # VS Code files are JSONC (they allow comments).
+        exclude: ^\.vscode/
     -   id: no-commit-to-branch
     repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -10,4 +12,4 @@ repos:
     -   id: ruff-check
     -   id: ruff-format
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.7
+    rev: v0.17.6

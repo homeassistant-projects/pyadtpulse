@@ -1,5 +1,5 @@
 [build-system]
-requires = ["uv_build"]
+requires = ["uv_build>=0.8.0,<0.12"]
 build-backend = "uv_build"
 
 [project]
@@ -34,7 +34,12 @@ dependencies = [
 
 [dependency-groups]
 bandit = ["bandit[sarif,toml]>=1.8.6"]
-dev = ["pre-commit>=4.2.0", "ruff>=0.12.3"]
+dev = [
+    "pre-commit>=4.2.0",
+    # Exact pin: ruff-action in the Validate workflow installs this version.
+    # Keep it in sync with the ruff-pre-commit rev in .pre-commit-config.yaml.
+    "ruff==0.17.6",
+]
 testing = [
     # aioresponses 0.7.9 cannot build aiohttp 3.14 responses (missing
     # stream_writer): https://github.com/pnuckowski/aioresponses/issues/289
@@ -42,11 +47,10 @@ testing = [
     "aiohttp<3.14",
     "aioresponses>=0.7.8",
     "freezegun>=1.5.2",
-    # pytest-isolate 0.0.17 fails on pytest 9.2 (_pytest.warnings.apply_warning_filters
-    # moved); 0.0.18 may fix it.
-    "pytest>=8.4.1,<9.2",
+    "pytest>=8.4.1",
     "pytest-asyncio>=1.0.0",
-    "pytest-isolate>=0.0.12",
+    # 0.0.18 is the first release that works with pytest 9.2.
+    "pytest-isolate>=0.0.18",
     "pytest-mock>=3.14.1",
 ]
 
@@ -84,9 +88,9 @@ ignore = [
 ]
 select = [
     "I",   # isort
-    "F",   # plake8-bugbear
-    "E",   # pycoyflakes
-    "W",
+    "F",   # pyflakes
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
     "D",   # pydocstyle
     "PL",  # pylint
     "RUF", # ruff
