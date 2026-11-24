@@ -17,7 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # Needed to upload SARIF to code scanning (push runs only).
+      # Needed to upload SARIF to code scanning. Fork PRs never get this
+      # permission, so the SARIF steps are skipped for them.
       security-events: write
     steps:
       - uses: actions/checkout@v6
@@ -31,13 +32,13 @@ jobs:
 
       # --only-group installs just Bandit, not the project and its deps.
       - name: Run Bandit (SARIF report)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         run: >-
           uv run --only-group bandit bandit --configfile pyproject.toml
           --recursive . --format sarif --output results.sarif --exit-zero
 
       - name: Upload SARIF report
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
