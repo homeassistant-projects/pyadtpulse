@@ -37,6 +37,8 @@ dependencies = [
 [dependency-groups]
 bandit = ["bandit[sarif,toml]>=1.8.6"]
 dev = [
+    # Exact pin: the release job in pypi-publish.yml runs this same version.
+    "commitizen==4.19.4",
     "deptry>=0.25.1",
     "pre-commit>=4.2.0",
     # Exact pin: ruff-action in the Validate workflow installs this version.
@@ -72,6 +74,17 @@ required-version = ">=0.9.17"
 # committed (this is a library), so this is what keeps CI off brand-new releases.
 exclude-newer = "2 days"
 default-groups = ["dev", "testing"]
+
+[tool.commitizen]
+# Releases are cut automatically from conventional commits on master: see
+# .github/workflows/pypi-publish.yml. feat -> minor, fix/perf/refactor -> patch,
+# "BREAKING CHANGE" -> major; docs/ci/build/chore/test don't release.
+name = "cz_conventional_commits"
+version_provider = "pep621"    # [project].version is the only version source
+tag_format = "$version"         # existing tags are 1.2.14 etc., no "v"
+update_changelog_on_bump = true
+changelog_incremental = true    # keep the hand-written history below new entries
+bump_message = "bump: version $current_version → $new_version"
 
 [tool.uv.build-backend]
 module-name = "pyadtpulse"

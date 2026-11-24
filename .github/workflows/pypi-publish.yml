@@ -1,26 +1,89 @@
-name: Publish to PyPI
+name: Release and publish to PyPI
+
+# Every push to master is checked for releasable commits. Commitizen reads the
+# conventional commits since the last tag (feat -> minor, fix/perf/refactor ->
+# patch, BREAKING CHANGE -> major); if there are any, it bumps
+# [project].version, updates CHANGELOG.md, commits, tags and pushes, and the
+# package is published from that tag. docs/ci/build/chore/test commits don't
+# release.
+#
+# The bump commit and tag are pushed with GITHUB_TOKEN, which never triggers
+# other workflow runs, so this doesn't loop and the tag push below doesn't
+# publish twice. Publishing must stay in this file: the PyPI trusted publisher
+# is bound to this workflow file name and the "pypi" environment.
 
 on:
   push:
+    branches: [master]
+    # A tag pushed by hand still publishes (no bump).
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
-  # Manual runs only publish when started from a release tag (see the job's `if`).
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# One release at a time. A newer push makes a pending run redundant (it would
+# see the same commits), so letting GitHub cancel pending runs is fine here.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   test:
-    if: startsWith(github.ref, 'refs/tags/')
     uses: ./.github/workflows/python-package.yml
+
+  bump:
+    name: Bump version and tag
+    needs: test
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the bump commit and tag, create the GitHub release
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # commitizen needs the tags and history
+          persist-credentials: true # needed to push the bump commit
+
+      - name: Set up UV
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: false
+
+      - name: Bump version
+        id: bump
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Same commitizen version as the dev group in pyproject.toml.
+          cz() { uvx --from "commitizen==4.19.4" cz "$@"; }
+          before=$(cz version --project)
+          # Exit code 21 = no commits that warrant a release.
+          cz --no-raise 21 bump --yes
+          after=$(cz version --project)
+          if [ "$before" = "$after" ]; then
+            echo "Nothing to release."
+            exit 0
+          fi
+          git push --atomic origin HEAD:master "$after"
+          cz changelog "$after" --dry-run > release-notes.md
+          gh release create "$after" --title "$after" --notes-file release-notes.md
+          echo "tag=$after" >> "$GITHUB_OUTPUT"
 
   pypi-publish:
     name: Upload release to PyPI
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: [test, bump]
+    # Publish when this run bumped a version, or when a tag was pushed by hand.
+    if: >-
+      always() && needs.test.result == 'success' &&
+      (needs.bump.outputs.tag != '' || startsWith(github.ref, 'refs/tags/'))
     runs-on: ubuntu-latest
-    # The PyPI trusted publisher is bound to this workflow file name and environment.
     environment:
       name: pypi
       url: https://pypi.org/p/pyadtpulse
@@ -28,9 +91,10 @@ jobs:
       contents: read
       id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
-      - name: Check out repository
+      - name: Check out the release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.bump.outputs.tag || github.ref }}
           persist-credentials: false
 
       - name: Set up UV

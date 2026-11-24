@@ -20,7 +20,8 @@ uv run pytest tests/test_pulse_mfa.py           # one file (plain pytest also pa
 uv run ruff check                               # lint (CI: validate.yaml)
 uv run ruff format --check                      # format check (CI: validate.yaml)
 uv run deptry .                                 # imports vs. declared dependencies
-uv run pre-commit install                       # once per clone
+uv run pre-commit install                       # once per clone (also installs the commit-msg hook)
+uv run cz bump --dry-run --yes                  # preview the next automatic release
 ```
 
 There is no mypy and no coverage tooling. Runtime type checks come from
@@ -73,9 +74,14 @@ CI (`.github/workflows/`) runs the tests on Python 3.10 to 3.14, plus ruff
 - Pre-commit blocks commits to `master` (`no-commit-to-branch`), so work on a
   branch and open a PR against `master`.
 - Docstrings follow the Google convention (ruff `D` rules).
-- Releases: bump `version` in `pyproject.toml` in a PR (it's the only place;
-  `const.__version__` reads it from package metadata), then push a tag named
-  exactly `X.Y.Z` (no `v`), which runs `pypi-publish.yml`.
+- **Every commit must be a conventional commit** (`feat:`, `fix:`, `docs:`,
+  `ci:`, `build:`, `chore:`, `test:`, `refactor:`, `perf:`). Releases are
+  automatic: on each push to `master`, `pypi-publish.yml` runs Commitizen, which
+  turns `feat` into a minor release and `fix`/`perf`/`refactor` into a patch,
+  bumps `pyproject.toml`, writes `CHANGELOG.md`, tags `X.Y.Z` and publishes. So
+  pick the type for what users get: a user-visible behavior change is `feat` or
+  `fix`, never `chore`. Never edit the version or the changelog by hand.
+  Validate rejects non-conventional commits in PRs.
 - PRs from first-time contributors don't run CI until the maintainer clicks
   "Approve and run workflows" on GitHub. Don't run a contributor's branch
   locally to work around that; ask the maintainer to approve the runs, then
