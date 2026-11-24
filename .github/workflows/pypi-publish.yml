@@ -56,8 +56,6 @@ jobs:
 
       - name: Bump version
         id: bump
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -72,9 +70,21 @@ jobs:
             exit 0
           fi
           git push --atomic origin HEAD:master "$after"
-          cz changelog "$after" --dry-run > release-notes.md
-          gh release create "$after" --title "$after" --notes-file release-notes.md
+          # Set right after the push: once the tag exists, it must be published.
           echo "tag=$after" >> "$GITHUB_OUTPUT"
+
+      # Release notes are the section cz bump just wrote to CHANGELOG.md.
+      # (`cz changelog <version>` can't be used: it refuses a rev range when
+      # changelog_incremental is set.) A failure here never blocks publishing.
+      - name: Create GitHub release
+        if: steps.bump.outputs.tag != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.bump.outputs.tag }}
+        run: |
+          awk -v v="$TAG" '$0 ~ "^## " v " " {f=1; next} f && /^## / {exit} f' CHANGELOG.md > release-notes.md
+          gh release create "$TAG" --title "$TAG" --notes-file release-notes.md
 
   pypi-publish:
     name: Upload release to PyPI
