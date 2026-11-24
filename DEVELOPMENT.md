@@ -11,7 +11,6 @@ Before you start, ensure you have installed:
 - Python 3.10 or newer (the version in `.python-version` is what uv installs by default)
 - Git
 - [`uv`](https://github.com/astral-sh/uv) 0.9.17 or newer
-- A code editor (e.g., VSCode)
 
 ---
 
@@ -47,14 +46,6 @@ uv lock --exclude-newer-package "NAME=0 days"
 `pre-commit install` makes `.git/hooks/pre-commit` run the hooks from your `.venv`: ruff
 lint and format, YAML/TOML/JSON checks, and a check that blocks commits straight to
 `master`. Work on a branch.
-
-### Update vscode to use your .venv
-
-- `ctrl + shift + p` (Command Palette)
-- `Python: Select Interpreter`
-- Select the environment to use. It should be `./.venv/bin/python`
-
----
 
 ### Running Scripts
 
@@ -118,9 +109,9 @@ is `3.13.4`, there will be issues.
 Releases are published to [PyPI](https://pypi.org/p/pyadtpulse) by
 `.github/workflows/pypi-publish.yml` when a version tag is pushed.
 
-1. Open a PR that bumps `version` in `pyproject.toml` and `__version__` in
-   `pyadtpulse/const.py` to the new version, and moves the `Unreleased` entries in
-   `CHANGELOG.md` under a heading for it. Merge it once CI passes.
+1. Open a PR that bumps `version` in `pyproject.toml` to the new version (it's the only
+   place the version is set) and moves the `Unreleased` entries in `CHANGELOG.md` under a
+   heading for it. Merge it once CI passes.
 2. Tag the merge commit on `master` with the version, exactly `X.Y.Z` (for example `1.2.15`,
    no `v` prefix), and push the tag:
 
