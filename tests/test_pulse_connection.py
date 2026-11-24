@@ -471,7 +471,7 @@ async def test_login_in_progress_cleared_on_cancel(mocker):
     """Cancelling a login while it waits clears the in-progress flag."""
     pc = setup_pulse_connection()
     never = asyncio.Event()
-    mocker.patch.object(PulseBackoff, "wait_for_backoff", side_effect=never.wait)
+    mocker.patch.object(PulseBackoff, "async_wait_for_backoff", side_effect=never.wait)
     task = asyncio.create_task(pc.async_do_login_query())
     for _ in range(5):
         await asyncio.sleep(0)
@@ -494,14 +494,14 @@ async def test_concurrent_login_does_not_close_first_session(mocker):
         await release.wait()
 
     clear = mocker.patch.object(
-        PulseConnectionProperties, "clear_session", side_effect=slow_clear_session
+        PulseConnectionProperties, "async_clear_session", side_effect=slow_clear_session
     )
     mocker.patch.object(
-        PulseBackoff, "wait_for_backoff", side_effect=asyncio.Event().wait
+        PulseBackoff, "async_wait_for_backoff", side_effect=asyncio.Event().wait
     )
     first = asyncio.create_task(pc.async_do_login_query())
     await entered.wait()
-    # the first login is suspended inside quick_logout
+    # the first login is suspended inside async_quick_logout
     # before the fix it also reset the session, waiting here forever
     assert await asyncio.wait_for(pc.async_do_login_query(), timeout=1) is None
     assert clear.call_count == 1

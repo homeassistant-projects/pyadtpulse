@@ -4,7 +4,6 @@ from asyncio import Event
 
 from typeguard import typechecked
 
-from .util import set_debug_lock
 from .pulse_backoff import PulseBackoff
 
 
@@ -14,24 +13,18 @@ class PulseConnectionStatus:
     __slots__ = (
         "_authenticated_flag",
         "_backoff",
-        "_pcs_attribute_lock",
     )
 
     @typechecked
-    def __init__(self, debug_locks: bool = False, detailed_debug_logging=False):
+    def __init__(self, detailed_debug_logging: bool = False):
         """
         Initialize the connection status object.
 
         Args:
-            debug_locks (bool, optional): Enable debug locks. Defaults to False.
             detailed_debug_logging (bool, optional): Detailed debug logging for backoff.
                 Defaults to False.
 
         """
-        self._pcs_attribute_lock = set_debug_lock(
-            debug_locks, "pyadtpulse.pcs_attribute_lock"
-        )
-
         self._backoff = PulseBackoff(
             "Connection Status",
             initial_backoff_interval=1,
@@ -42,21 +35,18 @@ class PulseConnectionStatus:
     @property
     def authenticated_flag(self) -> Event:
         """Get the authenticated flag."""
-        with self._pcs_attribute_lock:
-            return self._authenticated_flag
+        return self._authenticated_flag
 
     @property
     def retry_after(self) -> float:
         """Get the time (Unix timestamp) after which HTTP requests can be retried."""
-        with self._pcs_attribute_lock:
-            return self._backoff.expiration_time
+        return self._backoff.expiration_time
 
     @retry_after.setter
     @typechecked
     def retry_after(self, seconds: float) -> None:
         """Set the time (Unix timestamp) after which HTTP requests can be retried."""
-        with self._pcs_attribute_lock:
-            self._backoff.set_absolute_backoff_time(seconds)
+        self._backoff.set_absolute_backoff_time(seconds)
 
     def get_backoff(self) -> PulseBackoff:
         """Get the backoff object."""
@@ -65,12 +55,10 @@ class PulseConnectionStatus:
     @property
     def detailed_debug_logging(self) -> bool:
         """Get the detailed debug logging flag."""
-        with self._pcs_attribute_lock:
-            return self._backoff.detailed_debug_logging
+        return self._backoff.detailed_debug_logging
 
     @detailed_debug_logging.setter
     @typechecked
     def detailed_debug_logging(self, value: bool):
         """Set the detailed debug logging flag."""
-        with self._pcs_attribute_lock:
-            self._backoff.detailed_debug_logging = value
+        self._backoff.detailed_debug_logging = value

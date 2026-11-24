@@ -70,7 +70,7 @@ async def main() -> None:
             print(zone["zone"], zone["name"], zone["state"], zone["status"])
 
         while True:
-            alarm_changed, zone_ids = await adt.wait_for_update()
+            alarm_changed, zone_ids = await adt.async_wait_for_update()
             if alarm_changed:
                 print("Alarm is now", site.alarm_control_panel.status)
             for zone_id in zone_ids:
@@ -93,7 +93,7 @@ asyncio.run(main())
 - `site.alarm_control_panel.status` is one of `"off"`, `"away"`, `"stay"`, `"night"`,
   `"arming"`, `"disarming"` or `"unknown"`. The panel also has `is_disarmed`, `is_away`,
   `is_home`, `is_armed_night`, `is_force_armed`, `is_arming` and `is_disarming`.
-- `wait_for_update()` waits until ADT reports a change and returns whether the alarm state
+- `async_wait_for_update()` waits until ADT reports a change and returns whether the alarm state
   changed, plus the ids of the zones that did. It raises the error the background tasks
   hit, for example `PulseGatewayOfflineError` or `PulseNotLoggedInError`; call
   `async_login()` again after a `PulseNotLoggedInError`.
@@ -200,7 +200,6 @@ trust it again.
 | `keepalive_interval` | `5` | Minutes between keepalive requests that keep the session open. Must be from 1 to 15. |
 | `relogin_interval` | `120` | Minutes between background re-logins. Each re-login happens at a random point between 75% and 100% of the interval. Must be at least 20. |
 | `detailed_debug_logging` | `False` | Log more detail, such as each request and how long updates take. |
-| `debug_locks` | `False` | Use locks that log who holds them, for debugging. |
 
 `keepalive_interval`, `relogin_interval` and `detailed_debug_logging` are also properties
 you can change on a running client. Setting `keepalive_interval` or `relogin_interval` to
@@ -214,6 +213,34 @@ adt.site.gateway.poll_interval = 2.0  # seconds between update checks (the defau
 
 `poll_interval` belongs to the site's gateway and is only available after login. When the
 gateway goes offline, pyadtpulse backs off from it, up to 10 minutes between checks.
+
+## Upgrading to 3.0
+
+pyadtpulse 3.0 finishes the API cleanup:
+
+- `PyADTPulseAsync.sites` is removed. Use `PyADTPulseAsync.site`.
+- `PulseNotLoggedInError` subclasses `PulseConnectionError` instead of
+  `PulseLoginException`. It means the session ended, not that the credentials
+  were rejected, so `except PulseLoginException` no longer catches it. Catch it on
+  its own (or as a `PulseConnectionError`) and log in again.
+- Every public coroutine now starts with `async_`:
+
+  | 2.x | 3.0 |
+  | --- | --- |
+  | `PyADTPulseAsync.wait_for_update()` | `async_wait_for_update()` |
+  | `PulseBackoff.wait_for_backoff()` | `async_wait_for_backoff()` |
+  | `ADTPulseSite.set_device()` | `async_set_device()` |
+  | `ADTPulseSite.fetch_devices()` | `async_fetch_devices()` |
+  | `PulseConnection.quick_logout()` | `async_quick_logout()` |
+  | `PulseQueryManager.query_orb()` | `async_query_orb()` |
+  | `PulseConnectionProperties.clear_session()` | `async_clear_session()` |
+
+  `wait_for_update()` and `wait_for_backoff()` still work but raise a
+  `DeprecationWarning`; they will be removed in 4.0.
+- The `debug_locks` parameter is removed from `PyADTPulseAsync` and the other
+  classes, along with `util.DebugRLock` and `util.set_debug_lock()`. The internal
+  threading locks are gone too: the client runs on one event loop, where they never
+  stopped coroutines from interleaving. Pass the other arguments by keyword.
 
 ## Upgrading to 2.0
 

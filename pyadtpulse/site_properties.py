@@ -1,10 +1,7 @@
 """Pulse Site Properties."""
 
-from threading import RLock
-
 from typeguard import typechecked
 
-from .util import DebugRLock, set_debug_lock
 from .zones import ADTPulseZones, ADTPulseFlattenedZone
 from .gateway import ADTPulseGateway
 from .alarm_panel import ADTPulseAlarmPanel
@@ -19,19 +16,16 @@ class ADTPulseSiteProperties:
         "_id",
         "_last_updated",
         "_name",
-        "_site_lock",
         "_zones",
     )
 
     @typechecked
-    def __init__(self, site_id: str, name: str, debug_locks: bool = False):
+    def __init__(self, site_id: str, name: str):
         """Init for ADTPulseSiteProperties."""
         self._id = site_id
         self._name = name
         self._last_updated: int = 0
         self._zones = ADTPulseZones()
-        self._site_lock: RLock | DebugRLock
-        self._site_lock = set_debug_lock(debug_locks, "pyadtpulse.site_property_lock")
         self._alarm_panel = ADTPulseAlarmPanel()
         self._gateway = ADTPulseGateway()
 
@@ -69,8 +63,7 @@ class ADTPulseSiteProperties:
             int: the time site last updated as datetime
 
         """
-        with self._site_lock:
-            return self._last_updated
+        return self._last_updated
 
     @property
     def zones(self) -> list[ADTPulseFlattenedZone]:
@@ -82,8 +75,7 @@ class ADTPulseSiteProperties:
                 empty if the site has none
 
         """
-        with self._site_lock:
-            return self._zones.flatten()
+        return self._zones.flatten()
 
     @property
     def zones_as_dict(self) -> ADTPulseZones:
@@ -94,8 +86,7 @@ class ADTPulseSiteProperties:
             ADTPulseZones: all zone information, empty if the site has none
 
         """
-        with self._site_lock:
-            return self._zones
+        return self._zones
 
     @property
     def alarm_control_panel(self) -> ADTPulseAlarmPanel:

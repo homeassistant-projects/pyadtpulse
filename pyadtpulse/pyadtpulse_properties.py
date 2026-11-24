@@ -5,7 +5,6 @@ import logging
 
 from typeguard import typechecked
 
-from .util import set_debug_lock
 from .const import (
     ADT_MIN_RELOGIN_INTERVAL,
     ADT_MAX_KEEPALIVE_INTERVAL,
@@ -21,7 +20,6 @@ class PyADTPulseProperties:
 
     __slots__ = (
         "_keepalive_interval",
-        "_pp_attribute_lock",
         "_relogin_interval",
         "_updates_exist",
     )
@@ -50,7 +48,6 @@ class PyADTPulseProperties:
         self,
         keepalive_interval: int = ADT_DEFAULT_KEEPALIVE_INTERVAL,
         relogin_interval: int = ADT_DEFAULT_RELOGIN_INTERVAL,
-        debug_locks: bool = False,
     ) -> None:
         """
         Create a PyADTPulse properties object.
@@ -58,17 +55,12 @@ class PyADTPulseProperties:
         Args:
         keepalive_interval: (int):
         relogin_interval: (int):
-        debug_locks: (bool): Enable debug locks. Defaults to False.
 
         """
         # FIXME use thread event/condition, regular condition?
         # defer initialization to make sure we have an event loop
 
         self._updates_exist = asyncio.locks.Event()
-
-        self._pp_attribute_lock = set_debug_lock(
-            debug_locks, "pyadtpulse.async_attribute_lock"
-        )
 
         self.keepalive_interval = keepalive_interval
         self.relogin_interval = relogin_interval
@@ -83,8 +75,7 @@ class PyADTPulseProperties:
                  0 means disabled
 
         """
-        with self._pp_attribute_lock:
-            return self._relogin_interval
+        return self._relogin_interval
 
     @relogin_interval.setter
     @typechecked
@@ -106,9 +97,8 @@ class PyADTPulseProperties:
             interval = ADT_DEFAULT_RELOGIN_INTERVAL
         else:
             self._check_relogin_interval(interval)
-        with self._pp_attribute_lock:
-            self._relogin_interval = interval
-            LOG.debug("relogin interval set to %d", self._relogin_interval)
+        self._relogin_interval = interval
+        LOG.debug("relogin interval set to %d", self._relogin_interval)
 
     @property
     def keepalive_interval(self) -> int:
@@ -119,8 +109,7 @@ class PyADTPulseProperties:
             int: the keepalive interval
 
         """
-        with self._pp_attribute_lock:
-            return self._keepalive_interval
+        return self._keepalive_interval
 
     @keepalive_interval.setter
     @typechecked
@@ -142,12 +131,10 @@ class PyADTPulseProperties:
             interval = ADT_DEFAULT_KEEPALIVE_INTERVAL
         else:
             self._check_keepalive_interval(interval)
-        with self._pp_attribute_lock:
-            self._keepalive_interval = interval
-            LOG.debug("keepalive interval set to %d", self._keepalive_interval)
+        self._keepalive_interval = interval
+        LOG.debug("keepalive interval set to %d", self._keepalive_interval)
 
     @property
     def updates_exist(self) -> asyncio.locks.Event:
         """Check if updates exist."""
-        with self._pp_attribute_lock:
-            return self._updates_exist
+        return self._updates_exist

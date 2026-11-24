@@ -9,7 +9,6 @@ from yarl import URL
 from aiohttp import CookieJar, ClientSession
 from typeguard import typechecked
 
-from .util import set_debug_lock
 from .const import (
     API_PREFIX,
     API_HOST_CA,
@@ -26,9 +25,7 @@ class PulseConnectionProperties:
     __slots__ = (
         "_api_host",
         "_api_version",
-        "_debug_locks",
         "_detailed_debug_logging",
-        "_pci_attribute_lock",
         "_session",
         "_user_agent",
     )
@@ -80,13 +77,8 @@ class PulseConnectionProperties:
         host: str,
         user_agent=ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"],
         detailed_debug_logging=False,
-        debug_locks=False,
     ) -> None:
         """Initialize Pulse connection information."""
-        self._pci_attribute_lock = set_debug_lock(
-            debug_locks, "pyadtpulse.pci_attribute_lock"
-        )
-        self.debug_locks = debug_locks
         self.detailed_debug_logging = detailed_debug_logging
         self._session: ClientSession | None = None
         self.service_host = host
@@ -102,8 +94,7 @@ class PulseConnectionProperties:
     @property
     def service_host(self) -> str:
         """Get the service host."""
-        with self._pci_attribute_lock:
-            return self._api_host
+        return self._api_host
 
     @service_host.setter
     @typechecked
@@ -116,49 +107,31 @@ class PulseConnectionProperties:
 
         """
         self.check_service_host(host)
-        with self._pci_attribute_lock:
-            self._api_host = host
+        self._api_host = host
 
     @property
     def detailed_debug_logging(self) -> bool:
         """Get the detailed debug logging flag."""
-        with self._pci_attribute_lock:
-            return self._detailed_debug_logging
+        return self._detailed_debug_logging
 
     @detailed_debug_logging.setter
     @typechecked
     def detailed_debug_logging(self, value: bool):
         """Set the detailed debug logging flag."""
-        with self._pci_attribute_lock:
-            self._detailed_debug_logging = value
-
-    @property
-    def debug_locks(self) -> bool:
-        """Get the debug locks flag."""
-        with self._pci_attribute_lock:
-            return self._debug_locks
-
-    @debug_locks.setter
-    @typechecked
-    def debug_locks(self, value: bool):
-        """Set the debug locks flag."""
-        with self._pci_attribute_lock:
-            self._debug_locks = value
+        self._detailed_debug_logging = value
 
     @property
     def session(self) -> ClientSession:
         """Get the session."""
-        with self._pci_attribute_lock:
-            if self._session is None:
-                self._session = ClientSession(cookie_jar=PulseCookieJar())
-            self._set_headers()
-            return self._session
+        if self._session is None:
+            self._session = ClientSession(cookie_jar=PulseCookieJar())
+        self._set_headers()
+        return self._session
 
     @property
     def api_version(self) -> str:
         """Get the API version."""
-        with self._pci_attribute_lock:
-            return self._api_version
+        return self._api_version
 
     @api_version.setter
     @typechecked
@@ -192,9 +165,8 @@ class PulseConnectionProperties:
                 "API version must be in the form major.minor.patch-subpatch"
             )
 
-        with self._pci_attribute_lock:
-            check_version_string(version)
-            self._api_version = version
+        check_version_string(version)
+        self._api_version = version
 
     @typechecked
     def make_url(self, uri: str) -> str:
@@ -208,15 +180,12 @@ class PulseConnectionProperties:
             str: the converted string
 
         """
-        with self._pci_attribute_lock:
-            return f"{self._api_host}{API_PREFIX}{self._api_version}{uri}"
+        return f"{self._api_host}{API_PREFIX}{self._api_version}{uri}"
 
-    async def clear_session(self):
+    async def async_clear_session(self):
         """Clear the session."""
-        # a threading lock must not be held across an await
-        with self._pci_attribute_lock:
-            old_session = self._session
-            self._session = None
+        old_session = self._session
+        self._session = None
         if old_session:
             await old_session.close()
 
