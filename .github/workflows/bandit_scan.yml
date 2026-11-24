@@ -5,27 +5,47 @@ on:
   pull_request:
     branches: ["master"]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
     permissions:
-      # required for all workflows
+      contents: read
+      # Needed to upload SARIF to code scanning (push runs only).
       security-events: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
 
-      - name: Sync uv
-        run: |
-          uv sync
-
-      - name: Run Bandit
-        run: |
-          uv run --only-group bandit bandit --configfile pyproject.toml --recursive . --format sarif --output results.sarif || true
+      # --only-group installs just Bandit, not the project and its deps.
+      - name: Run Bandit (SARIF report)
+        if: github.event_name == 'push'
+        run: >-
+          uv run --only-group bandit bandit --configfile pyproject.toml
+          --recursive . --format sarif --output results.sarif --exit-zero
 
       - name: Upload SARIF report
+        if: github.event_name == 'push'
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
+
+      # Fail the job on medium or high findings. The SARIF report above still
+      # lists the low-severity ones in code scanning. Runs last so the upload
+      # happens even when this step fails.
+      - name: Run Bandit
+        run: >-
+          uv run --only-group bandit bandit --configfile pyproject.toml
+          --recursive . --severity-level medium
