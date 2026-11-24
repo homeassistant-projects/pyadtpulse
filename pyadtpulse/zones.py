@@ -35,7 +35,7 @@ class ADTPulseZoneData:
         tags (Tuple): sensor and type(s)
         status (str): sensor status (i.e. Online, Low Battery, etc.)
         state (str): sensor state (i.e. Opened, Closed, etc)
-        timestamp (datetime): timestamp of last activity
+        last_activity_timestamp (int): time of last activity, as a Unix timestamp
 
     Will set unknown type defaults to all but name and id_
     """
@@ -72,7 +72,7 @@ class ADTPulseZoneData:
         self._tags = value
 
 
-class ADTPulseFlattendZone(TypedDict):
+class ADTPulseFlattenedZone(TypedDict):
     """
     Represent ADTPulseZones as a "flattened" dictionary.
 
@@ -83,7 +83,7 @@ class ADTPulseFlattendZone(TypedDict):
         tags (Tuple): sensor and type(s)
         status (str): sensor status (i.e. Online, Low Battery, etc.)
         state (str): sensor state (i.e. Opened, Closed, etc)
-        timestamp (datetime): timestamp of last activity
+        last_activity_timestamp (int): time of last activity, as a Unix timestamp
     """
 
     zone: int
@@ -146,48 +146,6 @@ class ADTPulseZones(UserDict):
         super().__setitem__(key, value)
 
     @typechecked
-    def update_status(self, key: int, status: str) -> None:
-        """
-        Update zone status.
-
-        Args:
-            key (int): zone id to change
-            status (str): status to set
-
-        """
-        temp = self._get_zonedata(key)
-        temp.status = status
-        self.__setitem__(key, temp)
-
-    @typechecked
-    def update_state(self, key: int, state: str) -> None:
-        """
-        Update zone state.
-
-        Args:
-            key (int): zone id to change
-            state (str): state to set
-
-        """
-        temp = self._get_zonedata(key)
-        temp.state = state
-        self.__setitem__(key, temp)
-
-    @typechecked
-    def update_last_activity_timestamp(self, key: int, dt: datetime) -> None:
-        """
-        Update timestamp.
-
-        Args:
-            key (int): zone id to change
-            dt (datetime): timestamp to set
-
-        """
-        temp = self._get_zonedata(key)
-        temp.last_activity_timestamp = int(dt.timestamp())
-        self.__setitem__(key, temp)
-
-    @typechecked
     def update_device_info(
         self,
         key: int,
@@ -219,15 +177,15 @@ class ADTPulseZones(UserDict):
         temp.last_activity_timestamp = int(last_activity.timestamp())
         self.__setitem__(key, temp)
 
-    def flatten(self) -> list[ADTPulseFlattendZone]:
+    def flatten(self) -> list[ADTPulseFlattenedZone]:
         """
         Flattens ADTPulseZones into a list of ADTPulseFlattenedZones.
 
         Returns:
-            List[ADTPulseFlattendZone]
+            List[ADTPulseFlattenedZone]
 
         """
-        result: list[ADTPulseFlattendZone] = []
+        result: list[ADTPulseFlattenedZone] = []
         for k, i in self.items():
             if not isinstance(i, ADTPulseZoneData):
                 raise ValueError("Invalid Zone data in ADTPulseZones")
