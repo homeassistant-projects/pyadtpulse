@@ -6,6 +6,7 @@ import asyncio
 import logging
 from random import randint
 from typing import NamedTuple
+from warnings import warn
 
 from lxml import html
 from yarl import URL
@@ -43,13 +44,13 @@ from .pulse_authentication_properties import PulseAuthenticationProperties
 LOG = logging.getLogger(__name__)
 SYNC_CHECK_TASK_NAME = "ADT Pulse Sync Check Task"
 KEEPALIVE_TASK_NAME = "ADT Pulse Keepalive Task"
-# backoff time before warning in wait_for_update()
+# backoff time before warning in async_wait_for_update()
 WARN_TRANSIENT_FAILURE_THRESHOLD = 2
 FULL_LOGOUT_INTERVAL = 6 * 60 * 60
 
 
 class PulseUpdate(NamedTuple):
-    """What changed, as returned by PyADTPulseAsync.wait_for_update()."""
+    """What changed, as returned by PyADTPulseAsync.async_wait_for_update()."""
 
     alarm_changed: bool
     """True if the alarm panel's status changed."""
@@ -209,7 +210,7 @@ class PyADTPulseAsync:
 
                     # fetch zones first, so that we can have the status
                     # updated with _update_alarm_status
-                    if not await new_site.fetch_devices(None):
+                    if not await new_site.async_fetch_devices(None):
                         LOG.error("Could not fetch zones from ADT site")
                     new_site.alarm_control_panel.update_alarm_from_etree(tree)
                     if new_site.alarm_control_panel.status == ADT_ALARM_UNKNOWN:
@@ -280,7 +281,7 @@ class PyADTPulseAsync:
             # next_update is None when Pulse doesn't report a next update time
             next_update = self.site.gateway.next_update
             if next_update is None or next_update < time.time():
-                await self.site.set_device(ADT_GATEWAY_STRING)
+                await self.site.async_set_device(ADT_GATEWAY_STRING)
 
         # randint only adds jitter to the relogin and logout times, so it
         # doesn't need a cryptographic generator (hence the noqa: S311).
@@ -332,13 +333,13 @@ class PyADTPulseAsync:
                         )
                         await self.async_logout()
                     else:
-                        await self._pulse_connection.quick_logout()
+                        await self._pulse_connection.async_quick_logout()
                     LOG.debug("%s: performing %s logout", task_name, msg)
                     try:
                         await self._login_looped(task_name)
                     except (PulseAuthenticationError, PulseMFARequiredError) as ex:
                         LOG.error("%s task exiting due to %s", task_name, ex)
-                        # wake wait_for_update so the caller can reauthenticate
+                        # wake async_wait_for_update so the caller can reauthenticate
                         self._set_update_exception(ex)
                         return
                     continue
@@ -373,7 +374,7 @@ class PyADTPulseAsync:
                 return
             except Exception as ex:
                 # Never let the task die silently: a dead task would leave
-                # wait_for_update() blocked forever.
+                # async_wait_for_update() blocked forever.
                 LOG.exception("%s exiting due to unexpected error", task_name)
                 self._set_update_exception(ex)
                 return
@@ -478,7 +479,7 @@ class PyADTPulseAsync:
                 if isinstance(ex, PulseExceptionWithRetry):
                     # async_login raises these at once until the retry time
                     # passes, so wait for it instead of spinning
-                    await ex.backoff.wait_for_backoff()
+                    await ex.backoff.async_wait_for_backoff()
                 continue
             except PulseNotLoggedInError as ex:
                 LOG.log(
@@ -570,7 +571,7 @@ class PyADTPulseAsync:
                         "Pulse update failed in task %s due to not logged in, relogging in...",  # noqa: E501
                         task_name,
                     )
-                    await self._pulse_connection.quick_logout()
+                    await self._pulse_connection.async_quick_logout()
                     await self._login_looped(task_name)
                     return
                 if not success:
@@ -593,7 +594,7 @@ class PyADTPulseAsync:
                     )
 
         async def shutdown_task(ex: Exception):
-            await self._pulse_connection.quick_logout()
+            await self._pulse_connection.async_quick_logout()
             await self._cancel_task(self._timeout_task)
             self._set_update_exception(ex)
 
@@ -602,7 +603,7 @@ class PyADTPulseAsync:
                 self._sync_check_sleeping.set()
                 if not have_updates and not self.site.gateway.is_online:
                     # gateway going back online will trigger a sync check of 1-0-0
-                    await self.site.gateway.backoff.wait_for_backoff()
+                    await self.site.gateway.backoff.async_wait_for_backoff()
                 else:
                     await asyncio.sleep(
                         self.site.gateway.poll_interval if not have_updates else 0.0
@@ -631,7 +632,7 @@ class PyADTPulseAsync:
                     LOG.info(
                         "Pulse sync check query failed due to not logged in, relogging in..."  # noqa: E501
                     )
-                    await self._pulse_connection.quick_logout()
+                    await self._pulse_connection.async_quick_logout()
                     await self._login_looped(task_name)
                     continue
                 if not handle_response(
@@ -651,7 +652,7 @@ class PyADTPulseAsync:
                     LOG.info(
                         "Pulse sync check text indicates logged out, re-logging in...."
                     )
-                    await self._pulse_connection.quick_logout()
+                    await self._pulse_connection.async_quick_logout()
                     await self._login_looped(task_name)
                 except (
                     PulseAuthenticationError,
@@ -681,7 +682,7 @@ class PyADTPulseAsync:
                 return
             except Exception as ex:
                 # Never let the task die silently: a dead task would leave
-                # wait_for_update() blocked forever.
+                # async_wait_for_update() blocked forever.
                 LOG.exception("%s exiting due to unexpected error", task_name)
                 self._set_update_exception(ex)
                 return
@@ -762,7 +763,7 @@ class PyADTPulseAsync:
 
     async def _async_finish_login(self, tree: html.HtmlElement | None) -> None:
         if tree is None:
-            await self._pulse_connection.quick_logout()
+            await self._pulse_connection.async_quick_logout()
             ex = PulseNotLoggedInError()
             self._update_exception = ex
             raise ex
@@ -776,7 +777,7 @@ class PyADTPulseAsync:
             await self._update_site(tree)
         if self._site is None:
             LOG.error("Could not retrieve any sites, login failed")
-            await self._pulse_connection.quick_logout()
+            await self._pulse_connection.async_quick_logout()
             ex = PulseNotLoggedInError()
             self._update_exception = ex
             raise ex
@@ -820,7 +821,7 @@ class PyADTPulseAsync:
         LOG.debug("Checking ADT Pulse cloud service for updates")
 
         # FIXME will have to query other URIs for camera/zwave/etc
-        tree = await self._pulse_connection.query_orb(
+        tree = await self._pulse_connection.async_query_orb(
             logging.INFO, "Error returned from ADT Pulse service check"
         )
         if tree is not None:
@@ -833,13 +834,28 @@ class PyADTPulseAsync:
         """
         Wait for update.
 
+        Deprecated: use async_wait_for_update. Kept because hass-adtpulse
+        still calls it; it will be removed in 4.0.
+        """
+        warn(
+            "PyADTPulseAsync.wait_for_update is deprecated and will be removed "
+            "in 4.0, use async_wait_for_update instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return await self.async_wait_for_update()
+
+    async def async_wait_for_update(self) -> PulseUpdate:
+        """
+        Wait for update.
+
         Blocks current async task until Pulse system
         signals an update
 
         Returns:
             PulseUpdate: whether the alarm status changed, and the ids of the
                 zones that were updated. It is a named tuple, so
-                ``alarm_changed, zones = await pulse.wait_for_update()`` works.
+                ``alarm_changed, zones = await pulse.async_wait_for_update()`` works.
 
         Raises:
             Every exception from exceptions.py are possible
@@ -953,7 +969,7 @@ class PyADTPulseAsync:
     @property
     def _update_exception(self) -> Exception | None:
         """
-        Return the exception to raise from the next wait_for_update().
+        Return the exception to raise from the next async_wait_for_update().
 
         Returns:
             Exception: the pending exception, or None
@@ -966,7 +982,7 @@ class PyADTPulseAsync:
     @typechecked
     def _update_exception(self, value: Exception | None) -> None:
         """
-        Set the exception to raise from the next wait_for_update().
+        Set the exception to raise from the next async_wait_for_update().
 
         Args:
             value (Exception): the exception, or None to clear it

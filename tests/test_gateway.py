@@ -166,7 +166,7 @@ async def test_backoff_wait_time(mock_sleep):
     gateway.backoff._expiration_time = 0.0
 
     # Act
-    await gateway.backoff.wait_for_backoff()
+    await gateway.backoff.async_wait_for_backoff()
 
     # Assert
     mock_sleep.assert_awaited_once_with(5.0)
@@ -399,8 +399,8 @@ async def load_gateway_page(site, get_mocked_url, read_file, file_name):
             body=read_file(file_name),
             content_type="text/html",
         )
-        await site.set_device(ADT_GATEWAY_STRING)
-    await site._pulse_connection._connection_properties.clear_session()
+        await site.async_set_device(ADT_GATEWAY_STRING)
+    await site._pulse_connection._connection_properties.async_clear_session()
     return site.gateway
 
 

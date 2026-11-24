@@ -132,7 +132,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
         return result
 
     @typechecked
-    async def set_device(self, device_id: str) -> None:
+    async def async_set_device(self, device_id: str) -> None:
         """
         Set the device attributes for the given device ID.
 
@@ -155,7 +155,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
             LOG.debug("Zone %s is not an integer, skipping", device_id)
 
     @typechecked
-    async def fetch_devices(self, tree: html.HtmlElement | None) -> bool:
+    async def async_fetch_devices(self, tree: html.HtmlElement | None) -> bool:
         """
         Fetch the devices from the tree and update the zone attributes.
 
@@ -221,9 +221,9 @@ class ADTPulseSite(ADTPulseSiteProperties):
             if result:
                 device_id = result[0]
                 if device_id == SECURITY_PANEL_ID or device_name == SECURITY_PANEL_NAME:
-                    return create_task(self.set_device(device_id))
+                    return create_task(self.async_set_device(device_id))
                 if zone_id and zone_id.isdecimal():
-                    return create_task(self.set_device(device_id))
+                    return create_task(self.async_set_device(device_id))
             LOG.debug("Skipping %s as it doesn't have an ID", device_name)
             return None
 
@@ -262,7 +262,9 @@ class ADTPulseSite(ADTPulseSiteProperties):
                     on_click_value_text in ("goToUrl('gateway.jsp');", "Gateway")
                     or device_name == "Gateway"
                 ):
-                    task_list.append(create_task(self.set_device(ADT_GATEWAY_STRING)))
+                    task_list.append(
+                        create_task(self.async_set_device(ADT_GATEWAY_STRING))
+                    )
                 elif (
                     result := check_panel_or_gateway(
                         regex_device,

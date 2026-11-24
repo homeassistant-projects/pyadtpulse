@@ -256,7 +256,7 @@ class PulseConnection(PulseQueryManager):
                 return None
             self._login_in_progress = True
         try:
-            await self.quick_logout()
+            await self.async_quick_logout()
             # just raise exceptions if we're not going to be able to log in
             lockout_time = self._login_backoff.expiration_time
             if lockout_time > time():
@@ -272,7 +272,7 @@ class PulseConnection(PulseQueryManager):
             }
             if self._authentication_properties.site_id:
                 data["networkid"] = self._authentication_properties.site_id
-            await self._login_backoff.wait_for_backoff()
+            await self._login_backoff.async_wait_for_backoff()
             try:
                 response = await self.async_query(
                     ADT_LOGIN_URI,
@@ -575,7 +575,7 @@ class PulseConnection(PulseQueryManager):
         finally:
             # the next login opens a new session; don't leak this one's sockets
             self._mfa_challenge = None
-            await self._connection_properties.clear_session()
+            await self._connection_properties.async_clear_session()
 
     @property
     def is_connected(self) -> bool:
@@ -609,7 +609,7 @@ class PulseConnection(PulseQueryManager):
         with self._pc_attribute_lock:
             self._login_in_progress = value
 
-    async def quick_logout(self) -> None:
+    async def async_quick_logout(self) -> None:
         """
         Quickly logout.
 
@@ -618,7 +618,7 @@ class PulseConnection(PulseQueryManager):
         LOG.debug("Resetting session")
         self._mfa_challenge = None
         self._connection_status.authenticated_flag.clear()
-        await self._connection_properties.clear_session()
+        await self._connection_properties.async_clear_session()
 
     @property
     def detailed_debug_logging(self) -> bool:

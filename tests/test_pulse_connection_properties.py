@@ -375,7 +375,7 @@ async def test_session_uses_pulse_cookie_jar():
     """The connection's session stores cookies in a PulseCookieJar."""
     p = PulseConnectionProperties("https://portal.adtpulse.com")
     assert isinstance(p.session.cookie_jar, PulseCookieJar)
-    await p.clear_session()
+    await p.async_clear_session()
 
 
 @pytest.mark.parametrize("version", ["31.0-39", "31-39", "31.0.0.1-39", "31.x.0-39"])
@@ -407,7 +407,7 @@ async def test_clear_session_does_not_hold_lock_while_closing(mocker):
         await real_close()
 
     mocker.patch.object(session, "close", side_effect=close)
-    await p.clear_session()
+    await p.async_clear_session()
     assert acquired == [True]
     assert session.closed
 

@@ -129,7 +129,7 @@ def test_reset_backoff():
 
 @pytest.mark.asyncio
 async def test_wait_for_backoff2(mock_sleep):
-    """Test that the wait_for_backoff method waits for the correct amount of time."""
+    """Test that async_wait_for_backoff waits for the correct amount of time."""
     # Arrange
 
     name = "test_backoff"
@@ -148,10 +148,10 @@ async def test_wait_for_backoff2(mock_sleep):
     )
 
     # Act
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.call_count == 0
     backoff.increment_backoff()
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.await_args[0][0] == pytest.approx(initial_backoff_interval)
 
 
@@ -407,7 +407,7 @@ def test_backoff_needed():
 # Wait for backoff
 @pytest.mark.asyncio
 async def test_wait_for_backoff(mocker):
-    """Test that the wait_for_backoff method waits for the correct amount of time."""
+    """Test that async_wait_for_backoff waits for the correct amount of time."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -431,7 +431,7 @@ async def test_wait_for_backoff(mocker):
         detailed_debug_logging,
     )
     # Act
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert backoff.expiration_time == 0.0
     backoff.increment_backoff()
     # Assert
@@ -467,7 +467,7 @@ def test_set_initial_backoff_interval():
 
 @pytest.mark.asyncio
 async def test_wait_for_backoff_with_negative_diff(mocker):
-    """Test that the wait_for_backoff method handles a negative diff correctly."""
+    """Test that the async_wait_for_backoff method handles a negative diff correctly."""
     # Arrange
     name = "test_backoff"
     initial_backoff_interval = 1.0
@@ -491,7 +491,7 @@ async def test_wait_for_backoff_with_negative_diff(mocker):
     time()
 
     # Act
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
 
     # Assert
     assert backoff._expiration_time >= initial_backoff_interval
@@ -713,36 +713,36 @@ async def test_increment_backoff_and_wait_for_backoff(mock_sleep):
     )
 
     # Act
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.call_count == 0
     backoff.increment_backoff()
 
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.call_count == 1
     assert mock_sleep.call_args_list[0][0][0] == initial_backoff_interval
     backoff.increment_backoff()
 
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.call_count == 2
     assert mock_sleep.call_args_list[1][0][0] == 2 * initial_backoff_interval
     backoff.increment_backoff()
 
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.call_count == 3
     assert mock_sleep.call_args_list[2][0][0] == 4 * initial_backoff_interval
     backoff.increment_backoff()
 
     # Additional call after 4 iterations
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.call_count == 4
     assert mock_sleep.call_args_list[3][0][0] == 8 * initial_backoff_interval
     backoff.increment_backoff()
 
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.call_count == 5
     assert mock_sleep.call_args_list[4][0][0] == max_backoff_interval
     backoff.increment_backoff()
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.call_count == 6
     assert mock_sleep.call_args_list[4][0][0] == max_backoff_interval
 
@@ -772,6 +772,18 @@ async def test_absolute_backoff_time(mock_sleep, freeze_time_to_now):
     backoff.reset_backoff()
     # make sure backoff can't be reset
     assert backoff.expiration_time == time() + 100
-    await backoff.wait_for_backoff()
+    await backoff.async_wait_for_backoff()
     assert mock_sleep.call_count == 1
     assert mock_sleep.call_args_list[0][0][0] == 100
+
+
+@pytest.mark.asyncio
+async def test_wait_for_backoff_is_deprecated(mocker):
+    """The old wait_for_backoff name still works, with a DeprecationWarning."""
+    backoff = PulseBackoff("test_backoff", 1.0)
+    new = mocker.patch.object(
+        PulseBackoff, "async_wait_for_backoff", new=mocker.AsyncMock()
+    )
+    with pytest.warns(DeprecationWarning, match="use async_wait_for_backoff"):
+        await backoff.wait_for_backoff()
+    new.assert_awaited_once()

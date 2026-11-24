@@ -250,7 +250,7 @@ class PulseQueryManager:
         async def setup_query():
             if method not in ("GET", "POST"):
                 raise ValueError("method must be GET or POST")
-            await self._connection_status.get_backoff().wait_for_backoff()
+            await self._connection_status.get_backoff().async_wait_for_backoff()
             if not self._connection_properties.api_version:
                 await self.async_fetch_version()
                 if not self._connection_properties.api_version:
@@ -297,7 +297,7 @@ class PulseQueryManager:
         )
         while retry < max_retries:
             try:
-                await query_backoff.wait_for_backoff()
+                await query_backoff.async_wait_for_backoff()
                 retry += 1
                 if (
                     requires_authentication
@@ -390,7 +390,7 @@ class PulseQueryManager:
         self._connection_status.get_backoff().reset_backoff()
         return (return_value[0], return_value[1], return_value[2])
 
-    async def query_orb(
+    async def async_query_orb(
         self, level: int, error_message: str
     ) -> html.HtmlElement | None:
         """

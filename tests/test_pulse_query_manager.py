@@ -148,7 +148,7 @@ async def test_fetch_version_eventually_succeeds(
 #     """
 
 #     async def query_orb_task():
-#         return await p.query_orb(logging.DEBUG, "Failed to query orb")
+#         return await p.async_query_orb(logging.DEBUG, "Failed to query orb")
 
 #     s = PulseConnectionStatus()
 #     cp = get_mocked_connection_properties

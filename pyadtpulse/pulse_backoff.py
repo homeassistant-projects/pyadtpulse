@@ -4,6 +4,7 @@ import asyncio
 import datetime
 from time import time
 from logging import getLogger
+from warnings import warn
 
 from typeguard import typechecked
 
@@ -133,6 +134,21 @@ class PulseBackoff:
             self._backoff_count = 0
 
     async def wait_for_backoff(self) -> None:
+        """
+        Wait for backoff.
+
+        Deprecated: use async_wait_for_backoff. Kept because hass-adtpulse
+        still calls it; it will be removed in 4.0.
+        """
+        warn(
+            "PulseBackoff.wait_for_backoff is deprecated and will be removed "
+            "in 4.0, use async_wait_for_backoff instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        await self.async_wait_for_backoff()
+
+    async def async_wait_for_backoff(self) -> None:
         """Wait for backoff."""
         with self._b_lock:
             curr_time = time()

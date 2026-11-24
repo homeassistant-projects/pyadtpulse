@@ -211,7 +211,7 @@ class PulseConnectionProperties:
         with self._pci_attribute_lock:
             return f"{self._api_host}{API_PREFIX}{self._api_version}{uri}"
 
-    async def clear_session(self):
+    async def async_clear_session(self):
         """Clear the session."""
         # a threading lock must not be held across an await
         with self._pci_attribute_lock:

@@ -70,7 +70,7 @@ async def main() -> None:
             print(zone["zone"], zone["name"], zone["state"], zone["status"])
 
         while True:
-            alarm_changed, zone_ids = await adt.wait_for_update()
+            alarm_changed, zone_ids = await adt.async_wait_for_update()
             if alarm_changed:
                 print("Alarm is now", site.alarm_control_panel.status)
             for zone_id in zone_ids:
@@ -93,7 +93,7 @@ asyncio.run(main())
 - `site.alarm_control_panel.status` is one of `"off"`, `"away"`, `"stay"`, `"night"`,
   `"arming"`, `"disarming"` or `"unknown"`. The panel also has `is_disarmed`, `is_away`,
   `is_home`, `is_armed_night`, `is_force_armed`, `is_arming` and `is_disarming`.
-- `wait_for_update()` waits until ADT reports a change and returns whether the alarm state
+- `async_wait_for_update()` waits until ADT reports a change and returns whether the alarm state
   changed, plus the ids of the zones that did. It raises the error the background tasks
   hit, for example `PulseGatewayOfflineError` or `PulseNotLoggedInError`; call
   `async_login()` again after a `PulseNotLoggedInError`.
@@ -224,6 +224,20 @@ pyadtpulse 3.0 finishes the API cleanup:
   `PulseLoginException`. It means the session ended, not that the credentials
   were rejected, so `except PulseLoginException` no longer catches it. Catch it on
   its own (or as a `PulseConnectionError`) and log in again.
+- Every public coroutine now starts with `async_`:
+
+  | 2.x | 3.0 |
+  | --- | --- |
+  | `PyADTPulseAsync.wait_for_update()` | `async_wait_for_update()` |
+  | `PulseBackoff.wait_for_backoff()` | `async_wait_for_backoff()` |
+  | `ADTPulseSite.set_device()` | `async_set_device()` |
+  | `ADTPulseSite.fetch_devices()` | `async_fetch_devices()` |
+  | `PulseConnection.quick_logout()` | `async_quick_logout()` |
+  | `PulseQueryManager.query_orb()` | `async_query_orb()` |
+  | `PulseConnectionProperties.clear_session()` | `async_clear_session()` |
+
+  `wait_for_update()` and `wait_for_backoff()` still work but raise a
+  `DeprecationWarning`; they will be removed in 4.0.
 
 ## Upgrading to 2.0
 
