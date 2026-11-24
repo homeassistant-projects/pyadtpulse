@@ -1,3 +1,10 @@
+## 1.3.3 (2026-11-24)
+
+### Fix
+
+- stop crashed or failed background tasks from freezing wait_for_update
+- accept relogin_interval=0 to disable relogin
+
 ## 1.3.2 (2026-11-24)
 
 ### Fix
