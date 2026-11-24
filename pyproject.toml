@@ -10,9 +10,9 @@ authors = [{ name = "Ryan Snodgrass" }]
 maintainers = [{ name = "Elliot Worth", email = "elliotworth@protonmail.com" }]
 readme = "README.md"
 license = "Apache-2.0"
+license-files = ["LICENSE.md"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
 
