@@ -5,7 +5,8 @@ from http import HTTPStatus
 from time import time
 from asyncio import wait_for
 from logging import getLogger
-from datetime import datetime
+from datetime import timezone
+from email.utils import parsedate_to_datetime
 
 from lxml import html
 from yarl import URL
@@ -22,7 +23,7 @@ from aiohttp import (
 )
 from typeguard import typechecked
 
-from .util import make_etree, set_debug_lock
+from .util import make_etree
 from .const import (
     ADT_ORB_URI,
     ADT_HTTP_BACKGROUND_URIS,
@@ -49,6 +50,22 @@ RECOVERABLE_ERRORS = {
 
 MAX_REQUERY_RETRIES = 3
 
+DEFAULT_QUERY_TIMEOUT = 10
+
+# request parameters whose values must never be written to the log
+REDACTED_PARAMS = frozenset({"usernameForm", "passwordForm", "fingerprint"})
+REDACTED_VALUE = "**REDACTED**"
+
+
+def _redact_params(params: dict[str, str] | None) -> dict[str, str] | None:
+    """Return a copy of params with credential values replaced."""
+    if params is None:
+        return None
+    return {
+        key: REDACTED_VALUE if key in REDACTED_PARAMS else value
+        for key, value in params.items()
+    }
+
 
 class PulseQueryManager:
     """Pulse Query Manager."""
@@ -57,7 +74,6 @@ class PulseQueryManager:
         "_connection_properties",
         "_connection_status",
         "_debug_locks",
-        "_pqm_attribute_lock",
     )
 
     @staticmethod
@@ -75,9 +91,6 @@ class PulseQueryManager:
         debug_locks: bool = False,
     ) -> None:
         """Initialize Pulse Query Manager."""
-        self._pqm_attribute_lock = set_debug_lock(
-            debug_locks, "pyadtpulse.pqm_attribute_lock"
-        )
         self._connection_status = connection_status
         self._connection_properties = connection_properties
         self._debug_locks = debug_locks
@@ -129,17 +142,15 @@ class PulseQueryManager:
 
             """
             if retry_after.isnumeric():
-                retval = int(retry_after) + int(time())
-            else:
-                try:
-                    retval = int(
-                        datetime.strptime(
-                            retry_after, "%a, %d %b %Y %H:%M:%S %Z"
-                        ).timestamp()
-                    )
-                except ValueError:
-                    return None
-            return retval
+                return int(retry_after) + int(time())
+            # an HTTP-date is always GMT (RFC 9110 section 5.6.7), never local time
+            try:
+                retry_date = parsedate_to_datetime(retry_after)
+            except (TypeError, ValueError, IndexError):
+                return None
+            if retry_date.tzinfo is None:
+                retry_date = retry_date.replace(tzinfo=timezone.utc)
+            return int(retry_date.timestamp())
 
         if return_value[0] in (
             HTTPStatus.TOO_MANY_REQUESTS,
@@ -159,24 +170,36 @@ class PulseQueryManager:
 
     @typechecked
     def _handle_network_errors(self, e: Exception) -> None:
-        if type(e) in (
-            ServerConnectionError,
-            ServerTimeoutError,
-            ServerDisconnectedError,
-        ):
+        """
+        Map a network exception to a Pulse connection exception.
+
+        Server-side failures, including every kind of timeout, raise
+        PulseServerConnectionError. Anything else raises
+        PulseClientConnectionError.
+
+        Raises:
+            PulseServerConnectionError: for server errors and timeouts.
+            PulseClientConnectionError: for client-side errors.
+
+        """
+        # isinstance, so that aiohttp's subclasses (ConnectionTimeoutError,
+        # SocketTimeoutError, ...) are covered too
+        # asyncio.TimeoutError is a separate class before Python 3.11
+        if isinstance(e, (ServerConnectionError, TimeoutError, asyncio.TimeoutError)):
+            raise PulseServerConnectionError(
+                str(e), self._connection_status.get_backoff()
+            )
+        if isinstance(e, ClientConnectorError):
+            if isinstance(e.os_error, BrokenPipeError):
+                raise PulseClientConnectionError(
+                    str(e), self._connection_status.get_backoff()
+                )
             raise PulseServerConnectionError(
                 str(e), self._connection_status.get_backoff()
             )
         if (
             isinstance(e, ClientConnectionError) and "Connection refused" in str(e)
-        ) or ("timed out") in str(e):
-            raise PulseServerConnectionError(
-                str(e), self._connection_status.get_backoff()
-            )
-        if isinstance(e, ClientConnectorError) and e.os_error not in (
-            TimeoutError,
-            BrokenPipeError,
-        ):
+        ) or "timed out" in str(e):
             raise PulseServerConnectionError(
                 str(e), self._connection_status.get_backoff()
             )
@@ -189,7 +212,7 @@ class PulseQueryManager:
         method: str = "GET",
         extra_params: dict[str, str] | None = None,
         extra_headers: dict[str, str] | None = None,
-        timeout: int = 1,
+        timeout: int | float = DEFAULT_QUERY_TIMEOUT,
         requires_authentication: bool = True,
     ) -> tuple[int, str | None, URL | None]:
         """
@@ -202,7 +225,9 @@ class PulseQueryManager:
                                                     Defaults to None.
             extra_headers (Optional[Dict], optional): extra HTTP headers.
                                                     Defaults to None.
-            timeout (int, optional): timeout in seconds. Defaults to 1.
+            timeout (int | float, optional): total timeout in seconds for each
+                                                    attempt, including reading the
+                                                    response body. Defaults to 10.
             requires_authentication (bool, optional): True if authentication is
                                                     required to perform query.
                                                     Defaults to True.
@@ -239,15 +264,16 @@ class PulseQueryManager:
             )
         await setup_query()
         url = self._connection_properties.make_url(uri)
-        headers = extra_headers if extra_headers is not None else {}
+        # copy, so the caller's dict is never changed
+        headers = dict(extra_headers) if extra_headers is not None else {}
         if uri in ADT_HTTP_BACKGROUND_URIS:
             headers.setdefault("Accept", ADT_OTHER_HTTP_ACCEPT_HEADERS["Accept"])
         if self._connection_properties.detailed_debug_logging:
             LOG.debug(
-                "Attempting %s %s params=%s timeout=%d",
+                "Attempting %s %s params=%s timeout=%s",
                 method,
                 url,
-                extra_params,
+                _redact_params(extra_params),
                 timeout,
             )
         retry = 0
@@ -290,7 +316,8 @@ class PulseQueryManager:
                             self._connection_status.authenticated_flag.wait(),
                             ADT_DEFAULT_LOGIN_TIMEOUT,
                         )
-                    except TimeoutError as ex:
+                    # asyncio.TimeoutError is a separate class before Python 3.11
+                    except (TimeoutError, asyncio.TimeoutError) as ex:
                         LOG.warning(
                             "%s for %s timed out waiting for authenticated flag to be set",  # noqa: E501
                             method,
@@ -302,7 +329,7 @@ class PulseQueryManager:
                 async with self._connection_properties.session.request(
                     method,
                     url,
-                    headers=extra_headers,
+                    headers=headers,
                     params=extra_params if method == "GET" else None,
                     data=extra_params if method == "POST" else None,
                     timeout=ClientTimeout(total=float(timeout)),
@@ -316,19 +343,22 @@ class PulseQueryManager:
                             self._get_http_status_description(return_value[0]),
                             retry,
                         )
-                        if max_retries > 1 and retry == max_retries:
-                            LOG.debug(
-                                "Exceeded max retries of %d, giving up", max_retries
-                            )
-                        else:
+                        if retry < max_retries:
                             query_backoff.increment_backoff()
-                            response.raise_for_status()
-                        continue
+                            continue
+                        LOG.debug("Exceeded max retries of %d, giving up", max_retries)
+                    # out of retries for a recoverable error, or any other error
+                    # status: raises ClientResponseError, handled below
                     response.raise_for_status()
                     break
 
             except ClientResponseError:
                 self._handle_http_errors(return_value)
+            except UnicodeDecodeError as ex:
+                raise PulseServerConnectionError(
+                    f"Could not decode response from {url}: {ex}",
+                    self._connection_status.get_backoff(),
+                ) from ex
             except (
                 ClientConnectorError,
                 ServerTimeoutError,
@@ -419,7 +449,11 @@ class PulseQueryManager:
                 exc_info=True,
             )
             self._handle_http_errors(response_values)
-            return
+        except UnicodeDecodeError as ex:
+            raise PulseServerConnectionError(
+                f"Could not decode response determining Pulse API version: {ex}",
+                self._connection_status.get_backoff(),
+            ) from ex
         except (
             ClientConnectorError,
             ServerTimeoutError,
@@ -432,7 +466,8 @@ class PulseQueryManager:
                 exc_info=True,
             )
             self._handle_network_errors(ex)
-        except TimeoutError as ex:
+        # asyncio.TimeoutError is a separate class before Python 3.11
+        except (TimeoutError, asyncio.TimeoutError) as ex:
             LOG.error(
                 "Timeout occurred determining Pulse API version %s",
                 ex.args,
