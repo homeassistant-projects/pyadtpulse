@@ -1,14 +1,18 @@
-## Unreleased
-# What's Changed
-* Pin aiohttp and pytest for tests so CI runs again by @jra3 in https://github.com/homeassistant-projects/pyadtpulse/pull/98
-* Fix logins that fail when ADT switches portal versions by @jra3 in https://github.com/homeassistant-projects/pyadtpulse/pull/99
-* Finish MFA logins with a verification code (`async_request_mfa_code`, `async_complete_mfa_login`) by @jra3 in https://github.com/homeassistant-projects/pyadtpulse/pull/100
-* Fix ruff format check and move test-only caps into the testing group by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/101
+## 1.3.0 (2026-11-24)
 
-# New Contributors
-* @jra3 made their first contribution in https://github.com/homeassistant-projects/pyadtpulse/pull/98
+### Feat
 
-**Full Changelog**: https://github.com/homeassistant-projects/pyadtpulse/compare/1.2.14...master
+- finish logins that need MFA with a verification code
+
+### Fix
+
+- address council review of the MFA flow
+- report a non-JSON MFA response as a server error
+- retry trusting the device under a unique name when Pulse says it's taken
+- report a rejected MFA code as an authentication error
+- build each query URL after waiting for login
+- send the signed-in session cookie after a Pulse sign-in
+- accept logins that Pulse answers from another API version
 
 ## 1.2.14 (2026-03-06)
 # What's Changed
