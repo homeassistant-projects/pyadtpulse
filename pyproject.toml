@@ -65,8 +65,6 @@ testing = [
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
 
-exclude = ["example-client.py"]
-
 [tool.uv]
 # Relative exclude-newer durations need uv 0.9.17+.
 required-version = ">=0.9.17"
@@ -95,7 +93,6 @@ module-root = ""
 line-length = 88                # Matches black
 show-fixes = true
 target-version = "py310"
-exclude = ["example-client.py"]
 
 [tool.ruff.format]
 docstring-code-format = true

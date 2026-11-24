@@ -111,8 +111,6 @@ await site.async_arm_away(force_arm=True)  # arm even with open zones
 
 Each returns `True` if ADT accepted the command.
 
-See [example-client.py](example-client.py) for a larger example.
-
 ## Verification code (MFA) login
 
 ADT trusts a device by its fingerprint. The first login with a fingerprint ADT doesn't
