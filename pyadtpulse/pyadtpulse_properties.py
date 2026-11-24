@@ -35,16 +35,17 @@ class PyADTPulseProperties:
         if keepalive_interval > ADT_MAX_KEEPALIVE_INTERVAL or keepalive_interval <= 0:
             raise ValueError(
                 f"keepalive interval ({keepalive_interval}) must be "
-                f"greater than 0 and less than {ADT_MAX_KEEPALIVE_INTERVAL}"
+                f"between 1 and {ADT_MAX_KEEPALIVE_INTERVAL}"
             )
 
     @staticmethod
     @typechecked
     def _check_relogin_interval(relogin_interval: int) -> None:
-        if relogin_interval < ADT_MIN_RELOGIN_INTERVAL:
+        # 0 disables relogin
+        if relogin_interval != 0 and relogin_interval < ADT_MIN_RELOGIN_INTERVAL:
             raise ValueError(
-                f"relogin interval ({relogin_interval}) must be "
-                f"greater than {ADT_MIN_RELOGIN_INTERVAL}"
+                f"relogin interval ({relogin_interval}) must be 0 (disabled) "
+                f"or at least {ADT_MIN_RELOGIN_INTERVAL}"
             )
 
     @typechecked
@@ -97,11 +98,12 @@ class PyADTPulseProperties:
 
         Args:
             interval (int|None): The number of minutes between logins.
+                            0 disables relogin.
                             If set to None, resets to ADT_DEFAULT_RELOGIN_INTERVAL
 
         Raises:
-            ValueError: if a relogin interval of less than ADT_MIN_RELOGIN_INTERVAL
-                        minutes is specified
+            ValueError: if a relogin interval other than 0 and less than
+                        ADT_MIN_RELOGIN_INTERVAL minutes is specified
 
         """
         if interval is None:
