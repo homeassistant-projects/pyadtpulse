@@ -10,4 +10,4 @@ repos:
     -   id: ruff-check
     -   id: ruff-format
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.7
+    rev: v0.17.6
