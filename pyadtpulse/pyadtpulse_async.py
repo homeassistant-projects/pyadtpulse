@@ -6,7 +6,6 @@ import asyncio
 import logging
 from random import randint
 from typing import NamedTuple
-from warnings import warn
 
 from lxml import html
 from yarl import URL
@@ -874,22 +873,6 @@ class PyADTPulseAsync:
         return PulseUpdate(
             self.site.alarm_control_panel.status != old_alarm_status, updated_zones
         )
-
-    @property
-    def sites(self) -> list[ADTPulseSite]:
-        """
-        Return all sites for this ADT Pulse account.
-
-        Deprecated: an account has one site; use site. This will be removed
-        in 3.0. It is kept in 2.0 because hass-adtpulse still reads it.
-        """
-        warn(
-            "PyADTPulseAsync.sites is deprecated and will be removed in 3.0, "
-            "use PyADTPulseAsync.site instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return [self.site]
 
     @property
     def site(self) -> ADTPulseSite:

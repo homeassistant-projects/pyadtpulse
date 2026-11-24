@@ -215,6 +215,12 @@ adt.site.gateway.poll_interval = 2.0  # seconds between update checks (the defau
 `poll_interval` belongs to the site's gateway and is only available after login. When the
 gateway goes offline, pyadtpulse backs off from it, up to 10 minutes between checks.
 
+## Upgrading to 3.0
+
+pyadtpulse 3.0 finishes the API cleanup:
+
+- `PyADTPulseAsync.sites` is removed. Use `PyADTPulseAsync.site`.
+
 ## Upgrading to 2.0
 
 pyadtpulse 2.0 removes code that was deprecated or never worked:

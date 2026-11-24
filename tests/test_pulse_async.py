@@ -1259,11 +1259,3 @@ async def test_wait_for_update_returns_pulse_update(
     assert update.updated_zones == {1}
     alarm_changed, zones = update
     assert (alarm_changed, zones) == (False, {1})
-
-
-@pytest.mark.asyncio
-async def test_sites_is_deprecated(adt_pulse_instance: tuple[PyADTPulseAsync, Any]):
-    """Sites still returns the one site, with a DeprecationWarning."""
-    p, _ = adt_pulse_instance
-    with pytest.warns(DeprecationWarning, match="use PyADTPulseAsync.site"):
-        assert p.sites == [p.site]
