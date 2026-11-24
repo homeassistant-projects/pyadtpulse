@@ -1,6 +1,4 @@
 {
-  "sleep_interval": 5,
-  "use_async": true,
   "test_alarm": false,
   "debug": false,
   "debug_locks": false,
@@ -8,6 +6,7 @@
   "adtpulse_password": "supersecretpassword",
   "adtpulse_fingerprint": "areallyreallyreallyreallyreallylongstring",
   "service_host": "https://portal.adtpulse.com",
+  "device_name": "pyadtpulse example client",
   "relogin_interval": 60,
   "keepalive_interval": 10,
   "poll_interval": 0.9
