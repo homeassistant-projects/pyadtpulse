@@ -4,7 +4,6 @@ import re
 import logging
 from typing import Any
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from threading import RLock
 from dataclasses import MISSING, field, fields, dataclass
 
 from typeguard import typechecked
@@ -59,7 +58,6 @@ class ADTPulseGateway:
             ADT_GATEWAY_MAX_OFFLINE_POLL_INTERVAL,
         )
     )
-    _attribute_lock: RLock = field(default_factory=RLock)
     model: str | None = None
     serial_number: str | None = None
     next_update: int = 0
@@ -86,8 +84,7 @@ class ADTPulseGateway:
             bool: True if gateway is online
 
         """
-        with self._attribute_lock:
-            return self._status_text == "ONLINE"
+        return self._status_text == "ONLINE"
 
     @is_online.setter
     @typechecked
@@ -99,40 +96,37 @@ class ADTPulseGateway:
             status (bool): True if gateway is online
 
         """
-        with self._attribute_lock:
-            if status == self.is_online:
-                return
-            old_status = self._status_text
-            self._status_text = "ONLINE"
-            if not status:
-                self._status_text = "OFFLINE"
+        if status == self.is_online:
+            return
+        old_status = self._status_text
+        self._status_text = "ONLINE"
+        if not status:
+            self._status_text = "OFFLINE"
 
-            LOG.info(
-                "ADT Pulse gateway %s",
-                self._status_text,
-            )
-            if old_status == "OFFLINE":
-                self.backoff.reset_backoff()
-            LOG.debug(
-                "Gateway poll interval: %d",
-                (
-                    self.backoff.initial_backoff_interval
-                    if self._status_text == "ONLINE"
-                    else self.backoff.get_current_backoff_interval()
-                ),
-            )
+        LOG.info(
+            "ADT Pulse gateway %s",
+            self._status_text,
+        )
+        if old_status == "OFFLINE":
+            self.backoff.reset_backoff()
+        LOG.debug(
+            "Gateway poll interval: %d",
+            (
+                self.backoff.initial_backoff_interval
+                if self._status_text == "ONLINE"
+                else self.backoff.get_current_backoff_interval()
+            ),
+        )
 
     @property
     def poll_interval(self) -> float:
         """Get initial poll interval."""
-        with self._attribute_lock:
-            return self.backoff.initial_backoff_interval
+        return self.backoff.initial_backoff_interval
 
     @poll_interval.setter
     @typechecked
     def poll_interval(self, new_interval: float) -> None:
-        with self._attribute_lock:
-            self.backoff.initial_backoff_interval = new_interval
+        self.backoff.initial_backoff_interval = new_interval
 
     @staticmethod
     def _check_mac_address(mac_address: str) -> bool:

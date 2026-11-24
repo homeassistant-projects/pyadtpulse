@@ -18,7 +18,7 @@ from yarl import URL
 from aiohttp import ClientError, ClientTimeout
 from typeguard import typechecked
 
-from .util import make_etree, set_debug_lock
+from .util import make_etree
 from .const import (
     ADT_LOGIN_URI,
     ADT_LOGOUT_URI,
@@ -70,7 +70,6 @@ class PulseConnection(PulseQueryManager):
         "_login_backoff",
         "_login_in_progress",
         "_mfa_challenge",
-        "_pc_attribute_lock",
     )
 
     @typechecked
@@ -79,7 +78,6 @@ class PulseConnection(PulseQueryManager):
         pulse_connection_status: PulseConnectionStatus,
         pulse_connection_properties: PulseConnectionProperties,
         pulse_authentication: PulseAuthenticationProperties,
-        debug_locks: bool = False,
     ):
         """Initialize ADT Pulse connection."""
         # need to initialize this after the session since we set cookies
@@ -87,10 +85,6 @@ class PulseConnection(PulseQueryManager):
         super().__init__(
             pulse_connection_status,
             pulse_connection_properties,
-            debug_locks,
-        )
-        self._pc_attribute_lock = set_debug_lock(
-            debug_locks, "pyadtpulse.pc_attribute_lock"
         )
         self._authentication_properties = pulse_authentication
         self._login_backoff = PulseBackoff(
@@ -251,12 +245,11 @@ class PulseConnection(PulseQueryManager):
         # Check and set the flag with no await in between, so a second caller
         # (such as the keepalive and sync tasks at once) returns instead of
         # closing the session the first one is logging in with.
-        with self._pc_attribute_lock:
-            if self._login_in_progress:
-                return None
-            self._login_in_progress = True
+        if self._login_in_progress:
+            return None
+        self._login_in_progress = True
         try:
-            await self.quick_logout()
+            await self.async_quick_logout()
             # just raise exceptions if we're not going to be able to log in
             lockout_time = self._login_backoff.expiration_time
             if lockout_time > time():
@@ -272,7 +265,7 @@ class PulseConnection(PulseQueryManager):
             }
             if self._authentication_properties.site_id:
                 data["networkid"] = self._authentication_properties.site_id
-            await self._login_backoff.wait_for_backoff()
+            await self._login_backoff.async_wait_for_backoff()
             try:
                 response = await self.async_query(
                     ADT_LOGIN_URI,
@@ -575,7 +568,7 @@ class PulseConnection(PulseQueryManager):
         finally:
             # the next login opens a new session; don't leak this one's sockets
             self._mfa_challenge = None
-            await self._connection_properties.clear_session()
+            await self._connection_properties.async_clear_session()
 
     @property
     def is_connected(self) -> bool:
@@ -588,28 +581,20 @@ class PulseConnection(PulseQueryManager):
     @property
     def login_backoff(self) -> PulseBackoff:
         """Return backoff object."""
-        with self._pc_attribute_lock:
-            return self._login_backoff
-
-    @property
-    def debug_locks(self):
-        """Return debug locks."""
-        return self._debug_locks
+        return self._login_backoff
 
     @property
     def login_in_progress(self) -> bool:
         """Return login in progress."""
-        with self._pc_attribute_lock:
-            return self._login_in_progress
+        return self._login_in_progress
 
     @login_in_progress.setter
     @typechecked
     def login_in_progress(self, value: bool) -> None:
         """Set login in progress."""
-        with self._pc_attribute_lock:
-            self._login_in_progress = value
+        self._login_in_progress = value
 
-    async def quick_logout(self) -> None:
+    async def async_quick_logout(self) -> None:
         """
         Quickly logout.
 
@@ -618,7 +603,7 @@ class PulseConnection(PulseQueryManager):
         LOG.debug("Resetting session")
         self._mfa_challenge = None
         self._connection_status.authenticated_flag.clear()
-        await self._connection_properties.clear_session()
+        await self._connection_properties.async_clear_session()
 
     @property
     def detailed_debug_logging(self) -> bool:
@@ -632,10 +617,9 @@ class PulseConnection(PulseQueryManager):
     @detailed_debug_logging.setter
     @typechecked
     def detailed_debug_logging(self, value: bool):
-        with self._pc_attribute_lock:
-            self._login_backoff.detailed_debug_logging = value
-            self._connection_properties.detailed_debug_logging = value
-            self._connection_status.detailed_debug_logging = value
+        self._login_backoff.detailed_debug_logging = value
+        self._connection_properties.detailed_debug_logging = value
+        self._connection_status.detailed_debug_logging = value
 
     def get_login_backoff(self) -> PulseBackoff:
         """Return login backoff."""

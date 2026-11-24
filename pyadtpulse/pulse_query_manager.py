@@ -73,7 +73,6 @@ class PulseQueryManager:
     __slots__ = (
         "_connection_properties",
         "_connection_status",
-        "_debug_locks",
     )
 
     @staticmethod
@@ -88,12 +87,10 @@ class PulseQueryManager:
         self,
         connection_status: PulseConnectionStatus,
         connection_properties: PulseConnectionProperties,
-        debug_locks: bool = False,
     ) -> None:
         """Initialize Pulse Query Manager."""
         self._connection_status = connection_status
         self._connection_properties = connection_properties
-        self._debug_locks = debug_locks
 
     @staticmethod
     @typechecked
@@ -250,7 +247,7 @@ class PulseQueryManager:
         async def setup_query():
             if method not in ("GET", "POST"):
                 raise ValueError("method must be GET or POST")
-            await self._connection_status.get_backoff().wait_for_backoff()
+            await self._connection_status.get_backoff().async_wait_for_backoff()
             if not self._connection_properties.api_version:
                 await self.async_fetch_version()
                 if not self._connection_properties.api_version:
@@ -287,7 +284,6 @@ class PulseQueryManager:
             f"Query:{method} {uri}",
             self._connection_status.get_backoff().initial_backoff_interval,
             threshold=0,
-            debug_locks=self._debug_locks,
             detailed_debug_logging=self._connection_properties.detailed_debug_logging,
         )
         max_retries = (
@@ -297,7 +293,7 @@ class PulseQueryManager:
         )
         while retry < max_retries:
             try:
-                await query_backoff.wait_for_backoff()
+                await query_backoff.async_wait_for_backoff()
                 retry += 1
                 if (
                     requires_authentication
@@ -390,7 +386,7 @@ class PulseQueryManager:
         self._connection_status.get_backoff().reset_backoff()
         return (return_value[0], return_value[1], return_value[2])
 
-    async def query_orb(
+    async def async_query_orb(
         self, level: int, error_message: str
     ) -> html.HtmlElement | None:
         """

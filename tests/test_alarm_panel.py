@@ -116,11 +116,6 @@ def test_update_keeps_transition_until_timeout():
 # ---------------------------------------------------------------------------
 
 
-def test_state_lock_is_per_instance():
-    """Each panel has its own lock."""
-    assert ADTPulseAlarmPanel()._state_lock is not ADTPulseAlarmPanel()._state_lock
-
-
 def test_last_arm_disarm_is_set_at_creation():
     """_last_arm_disarm is the creation time, not the module import time."""
     with freeze_time("2031-05-06 07:08:09"):
@@ -242,7 +237,7 @@ async def test_arm(method, mode, connection, arm_responses, get_mocked_url, read
     assert panel.is_arming
     assert not panel.is_force_armed
     assert panel.last_update > 0
-    await connection._connection_properties.clear_session()
+    await connection._connection_properties.async_clear_session()
 
 
 @pytest.mark.asyncio
@@ -263,7 +258,7 @@ async def test_force_arm(connection, arm_responses, get_mocked_url, read_file):
     ]
     assert panel.is_force_armed
     assert panel.status == ADT_ALARM_ARMING
-    await connection._connection_properties.clear_session()
+    await connection._connection_properties.async_clear_session()
 
 
 @pytest.mark.asyncio
@@ -287,7 +282,7 @@ async def test_disarm(connection, arm_responses, get_mocked_url, read_file):
     assert panel.status == ADT_ALARM_DISARMING
     assert panel.is_disarming
     assert not panel.is_force_armed
-    await connection._connection_properties.clear_session()
+    await connection._connection_properties.async_clear_session()
 
 
 @pytest.mark.asyncio
@@ -309,7 +304,7 @@ async def test_arm_fails_on_error_block(
         caplog.text
     )
     assert "Arm Anyway" not in caplog.text
-    await connection._connection_properties.clear_session()
+    await connection._connection_properties.async_clear_session()
 
 
 @pytest.mark.asyncio
@@ -324,7 +319,7 @@ async def test_arm_http_error_leaves_state(connection, arm_responses, get_mocked
         await panel.async_arm_home(connection)
     assert panel.status == ADT_ALARM_OFF
     assert not panel.is_force_armed
-    await connection._connection_properties.clear_session()
+    await connection._connection_properties.async_clear_session()
 
 
 @pytest.mark.asyncio
