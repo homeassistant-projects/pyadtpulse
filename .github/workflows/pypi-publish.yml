@@ -61,6 +61,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # Same commitizen version as the dev group in pyproject.toml.
           cz() { uvx --from "commitizen==4.19.4" cz "$@"; }
+          # PRs merged back to back start overlapping runs. Only the run for
+          # master's newest commit releases (its bump covers every commit);
+          # an older one would only fail on a non-fast-forward push.
+          git fetch -q origin master
+          if [ "$(git rev-parse origin/master)" != "$GITHUB_SHA" ]; then
+            echo "master has moved past $GITHUB_SHA; the newer run releases."
+            exit 0
+          fi
           before=$(cz version --project)
           # Exit code 21 = no commits that warrant a release.
           cz --no-raise 21 bump --yes
