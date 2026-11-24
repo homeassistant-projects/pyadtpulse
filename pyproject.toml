@@ -51,7 +51,7 @@ testing = [
     # moved). 0.0.18 fixes it (233 tests pass on pytest 9.2.0); drop this cap and
     # require pytest-isolate>=0.0.18 once 0.0.18 is older than the exclude-newer
     # cooldown below (released 2026-11-22).
-    "pytest>=8.4.1,<9.2",
+    "pytest>=8.4.1,<9.3",
     "pytest-asyncio>=1.0.0",
     "pytest-isolate>=0.0.12",
     "pytest-mock>=3.14.1",
