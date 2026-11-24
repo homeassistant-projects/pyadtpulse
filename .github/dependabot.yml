@@ -20,10 +20,6 @@ updates:
       # (pnuckowski/aioresponses#289).
       - dependency-name: aiohttp
         versions: [">=3.14"]
-      # pytest<9.2: pytest-isolate 0.0.17 breaks on pytest 9.2. Drop the cap
-      # and this entry once pytest-isolate 0.0.18 clears the 2-day cooldown.
-      - dependency-name: pytest
-        versions: [">=9.2"]
 
   # Actions are pinned to commit SHAs; Dependabot bumps the SHA and the
   # trailing "# vX.Y.Z" comment.
