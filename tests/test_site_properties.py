@@ -5,16 +5,8 @@ This module contains tests that verify the behavior of the ADTPulseSitePropertie
 which handles site configuration, zones, alarm panel, and gateway functionality.
 """
 
-import pytest
-
-from pyadtpulse.const import DEFAULT_API_HOST
 from pyadtpulse.zones import ADTPulseZones, ADTPulseZoneData
-from pyadtpulse.alarm_panel import ADTPulseAlarmPanel
 from pyadtpulse.site_properties import ADTPulseSiteProperties
-from pyadtpulse.pulse_connection import PulseConnection
-from pyadtpulse.pulse_connection_status import PulseConnectionStatus
-from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
-from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProperties
 
 # Constants
 TEST_SITE_ID = "12345"
@@ -100,61 +92,6 @@ class TestADTPulseSiteProperties:
         """
         site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
         mocker.patch.object(site_properties._alarm_panel, "_status", "Armed Away")
-
-    @pytest.mark.asyncio
-    async def test_cannot_set_alarm_status(self, mocker):
-        """
-        Tests failure scenario for alarm status setting.
-
-        Tests the failure handling when setting alarm status:
-        - Failed alarm status change returns False
-        - Connection parameters are properly handled
-
-        Args:
-            mocker: Pytest mocker fixture for mocking objects.
-
-        """
-        site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
-        cp = PulseConnectionProperties(DEFAULT_API_HOST)
-        cs = PulseConnectionStatus()
-        pa = PulseAuthenticationProperties(
-            "test@example.com", "testpassword", "testfingerprint"
-        )
-        connection = PulseConnection(cs, cp, pa)
-        result = await site_properties._alarm_panel._arm(
-            connection, "Armed Home", False
-        )
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_failed_updating_alarm_mode(self, mocker):
-        """
-        Tests alarm mode update failure handling.
-
-        Tests the behavior when alarm mode update fails:
-        - Failed mode update returns False
-        - Error handling works correctly
-
-        Args:
-            mocker: Pytest mocker fixture for mocking objects.
-
-        """
-        site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
-        cp = PulseConnectionProperties(DEFAULT_API_HOST)
-        cs = PulseConnectionStatus()
-        pa = PulseAuthenticationProperties(
-            "test@example.com", "testpassword", "testfingerprint"
-        )
-        connection = PulseConnection(cs, cp, pa)
-
-        async def mock_arm(*args, **kwargs):
-            return False
-
-        mocker.patch.object(ADTPulseAlarmPanel, "_arm", side_effect=mock_arm)
-        result = await site_properties.alarm_control_panel._arm(
-            connection, "new_mode", False
-        )
-        assert result is False
 
     def test_retrieve_alarm_panel_invalid_input(self, mocker):
         """

@@ -96,11 +96,6 @@ class PulseConnectionProperties:
         self._api_version = ""
         self._user_agent = user_agent
 
-    def __del__(self):
-        """Destructor for ADTPulseConnection."""
-        if self._session is not None and not self._session.closed:
-            self._session.detach()
-
     def _set_headers(self) -> None:
         if self._session is not None:
             self._session.headers.update(ADT_DEFAULT_HTTP_ACCEPT_HEADERS)
@@ -221,7 +216,8 @@ class PulseConnectionProperties:
             if len(parts) == 2:
                 version_parts = parts[0].split(".")
                 if not (
-                    version_parts[0].isdigit()
+                    len(version_parts) == 3
+                    and version_parts[0].isdigit()
                     and version_parts[1].isdigit()
                     and version_parts[2].isdigit()
                     and parts[1].isdigit()
@@ -229,12 +225,9 @@ class PulseConnectionProperties:
                     raise ValueError(
                         "API version must be in the form major.minor.patch-subpatch"
                     )
-                if len(version_parts) == 3 and version_parts[0].isdigit():
-                    major_version = int(version_parts[0])
-                    if major_version >= 26:
-                        return
-                    else:
-                        raise ValueError("API version is numeric but less than 26")
+                if int(version_parts[0]) >= 26:
+                    return
+                raise ValueError("API version is numeric but less than 26")
             raise ValueError(
                 "API version must be in the form major.minor.patch-subpatch"
             )
@@ -260,11 +253,12 @@ class PulseConnectionProperties:
 
     async def clear_session(self):
         """Clear the session."""
+        # a threading lock must not be held across an await
         with self._pci_attribute_lock:
             old_session = self._session
             self._session = None
-            if old_session:
-                await old_session.close()
+        if old_session:
+            await old_session.close()
 
 
 class PulseCookieJar(CookieJar):

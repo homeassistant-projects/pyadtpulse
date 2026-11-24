@@ -1,5 +1,7 @@
 """Test cases for PulseConnectionProperties class."""
 
+import gc
+import threading
 from asyncio import AbstractEventLoop
 
 import pytest
@@ -447,3 +449,50 @@ async def test_session_uses_pulse_cookie_jar():
     p = PulseConnectionProperties("https://portal.adtpulse.com")
     assert isinstance(p.session.cookie_jar, PulseCookieJar)
     await p.clear_session()
+
+
+@pytest.mark.parametrize("version", ["31.0-39", "31-39", "31.0.0.1-39", "31.x.0-39"])
+def test_malformed_api_version_raises_value_error(version):
+    """A version without major.minor.patch raises ValueError, not IndexError."""
+    p = PulseConnectionProperties("https://portal.adtpulse.com")
+    with pytest.raises(ValueError):
+        p.api_version = version
+
+
+@pytest.mark.asyncio
+async def test_clear_session_does_not_hold_lock_while_closing(mocker):
+    """Another thread can use the properties while the old session closes."""
+    p = PulseConnectionProperties("https://portal.adtpulse.com")
+    session = p.session
+    real_close = session.close
+    acquired: list[bool] = []
+
+    async def close() -> None:
+        def try_lock() -> None:
+            got = p._pci_attribute_lock.acquire(timeout=0)
+            acquired.append(got)
+            if got:
+                p._pci_attribute_lock.release()
+
+        thread = threading.Thread(target=try_lock)
+        thread.start()
+        thread.join()
+        await real_close()
+
+    mocker.patch.object(session, "close", side_effect=close)
+    await p.clear_session()
+    assert acquired == [True]
+    assert session.closed
+
+
+@pytest.mark.asyncio
+async def test_garbage_collection_does_not_detach_session():
+    """Dropping the properties leaves the session's connector to be closed."""
+    p = PulseConnectionProperties("https://portal.adtpulse.com")
+    session = p.session
+    del p
+    gc.collect()
+    # detach() would have dropped the connector without closing it
+    assert session.connector is not None
+    await session.close()
+    assert session.connector is None or session.connector.closed
