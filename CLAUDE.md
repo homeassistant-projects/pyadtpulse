@@ -76,3 +76,8 @@ CI (`.github/workflows/`) runs the tests on Python 3.10 to 3.14, plus ruff
 - Releases: bump `version` in `pyproject.toml` in a PR (it's the only place;
   `const.__version__` reads it from package metadata), then push a tag named
   exactly `X.Y.Z` (no `v`), which runs `pypi-publish.yml`.
+- PRs from first-time contributors don't run CI until the maintainer clicks
+  "Approve and run workflows" on GitHub. Don't run a contributor's branch
+  locally to work around that; ask the maintainer to approve the runs, then
+  read CI.
+- Merging a batch of PRs: use the `merge-prs` skill (`.claude/skills/merge-prs/`).

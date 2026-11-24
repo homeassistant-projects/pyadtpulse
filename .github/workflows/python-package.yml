@@ -12,8 +12,11 @@ on:
 permissions:
   contents: read
 
+# PRs: a new push cancels the older run. master: one group per commit, so
+# back-to-back merges each get a full run (GitHub cancels a *pending* run
+# whenever a newer one joins its group, even without cancel-in-progress).
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
