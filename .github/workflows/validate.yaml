@@ -2,9 +2,9 @@ name: Validate
 
 on:
   push:
-    branches: [master]
+    branches: [master, dev]
   pull_request:
-    branches: [master]
+    branches: [master, dev]
 
 permissions:
   contents: read
@@ -36,6 +36,27 @@ jobs:
         uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
         with:
           args: format --check --diff
+
+  # Every imported package must be a declared dependency, and every declared
+  # runtime dependency must be used (deptry is pinned in the dev group).
+  deptry:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up UV
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: true
+
+      - name: Check dependencies
+        run: |
+          uv sync
+          uv run --frozen deptry .
 
   # Releases are computed from commit messages (see pypi-publish.yml), so every
   # commit a PR adds must be a conventional commit. Merge commits are allowed.

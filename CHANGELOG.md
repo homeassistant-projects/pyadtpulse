@@ -1,3 +1,10 @@
+## 1.3.1 (2026-11-24)
+
+### Fix
+
+- generate random fingerprints with the secrets module
+- **mfa**: report ADT server errors during MFA as server errors, not a wrong code
+
 ## 1.3.0 (2026-11-24)
 
 ### Feat

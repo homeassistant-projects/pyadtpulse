@@ -2,6 +2,7 @@
 
 import re
 from dataclasses import dataclass
+from urllib.parse import urlencode
 
 # The MFA page (mfa/mfaSignIn.jsp) runs a React app configured by a
 # window.g.mfa object in an inline script. The app talks to Pulse through a
@@ -21,6 +22,33 @@ ADT_MFA_STATE_HREF = "rest/icontrol/ui/client/multiFactorAuth"
 ADT_MFA_DEFAULT_PROXY_URI = "/nga/serv/RunRRAProxy"
 ADT_POST_SIGNIN_URI = "/access/PostSigninProcessServ"
 ADT_MFA_API_VERSION = "7.0"
+
+# An X-token, as validateOtp returns it: key=value pairs ending in a signature
+_X_TOKEN_PATTERN = re.compile(r"[^\s'\"]*sig=[^\s'\"]*")
+_MAX_LOGGED_RESPONSE = 500
+
+
+def mask_mfa_secrets(value: object, *secrets: str | None) -> str:
+    """
+    Describe an MFA response for logs and errors, with secrets masked.
+
+    Args:
+        value: the response, usually the decoded JSON body
+        *secrets: values to mask, such as the pre-auth token or the OTP
+
+    Returns:
+        str: the response, with each secret and anything that looks like an
+            X-token replaced by "***", cut to a few hundred characters
+
+    """
+    text = value if isinstance(value, str) else repr(value)
+    for secret in secrets:
+        if secret:
+            text = text.replace(secret, "***")
+    text = _X_TOKEN_PATTERN.sub("***", text)
+    if len(text) > _MAX_LOGGED_RESPONSE:
+        text = text[:_MAX_LOGGED_RESPONSE] + "..."
+    return text
 
 
 @dataclass(frozen=True)
@@ -56,7 +84,9 @@ class PulseMFAChallenge:
 
     def proxy_url(self, href: str) -> str:
         """Return the proxy URI, relative to the API version, for a REST path."""
-        return f"{self.proxy_uri}?href={href}&sat={self.sat}"
+        # "/" stays readable, as the web client sends it
+        query = urlencode({"href": href, "sat": self.sat}, safe="/")
+        return f"{self.proxy_uri}?{query}"
 
     def headers(self, x_token: str | None = None) -> dict[str, str]:
         """Return the headers the MFA REST calls need."""

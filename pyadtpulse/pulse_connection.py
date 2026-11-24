@@ -27,8 +27,14 @@ from .const import (
     ADT_MFA_FAIL_URI,
     ADT_DEFAULT_LOGIN_TIMEOUT,
 )
-from .pulse_mfa import ADT_MFA_STATE_HREF, ADT_POST_SIGNIN_URI, PulseMFAChallenge
+from .pulse_mfa import (
+    ADT_MFA_STATE_HREF,
+    ADT_POST_SIGNIN_URI,
+    PulseMFAChallenge,
+    mask_mfa_secrets,
+)
 from .exceptions import (
+    PulseConnectionError,
     PulseMFARequiredError,
     PulseNotLoggedInError,
     PulseAccountLockedError,
@@ -295,13 +301,35 @@ class PulseConnection(PulseQueryManager):
         data: dict[str, str] | None = None,
         x_token: str | None = None,
     ) -> dict:
-        """Call an MFA REST command through the Pulse proxy and decode its JSON."""
+        """
+        Call an MFA REST command through the Pulse proxy and decode its JSON.
+
+        Raises:
+            PulseNotLoggedInError: if no MFA challenge is pending
+            _PulseMFACommandError: if Pulse refuses the command (HTTP 4xx)
+            PulseServerConnectionError: if Pulse fails (HTTP 5xx, a network
+                error, or an answer that is not JSON)
+            PulseServiceTemporarilyUnavailableError: if Pulse answers HTTP 429
+                or 503, or asked earlier to wait and that time has not passed
+
+        """
         challenge = self._mfa_challenge
         if challenge is None:
             raise PulseNotLoggedInError()
+        secrets_to_mask = (
+            challenge.pre_auth_token,
+            x_token,
+            (data or {}).get("otp"),
+        )
         # Not async_query: Pulse answers a rejected code with HTTP 400 and a JSON
         # detail, which async_query would report as a server error (bumping the
-        # connection backoff), and an OTP must not be retried.
+        # connection backoff), and an OTP must not be retried. So honor a
+        # Retry-After here, without sending anything, instead.
+        retry_after = self._connection_status.retry_after
+        if retry_after > time():
+            raise PulseServiceTemporarilyUnavailableError(
+                self._connection_status.get_backoff(), retry_after
+            )
         url = self._connection_properties.make_url(challenge.proxy_url(href))
         try:
             async with self._connection_properties.session.request(
@@ -313,6 +341,7 @@ class PulseConnection(PulseQueryManager):
             ) as response:
                 status = response.status
                 text = await response.text()
+                retry_header = response.headers.get("Retry-After")
         # asyncio.TimeoutError is a separate class before Python 3.11
         except (ClientError, asyncio.TimeoutError, UnicodeDecodeError) as ex:
             raise PulseServerConnectionError(
@@ -321,17 +350,52 @@ class PulseConnection(PulseQueryManager):
             ) from ex
         try:
             result = json.loads(text or "")
-        except ValueError as ex:
+        except ValueError:
+            result = None
+        detail = result.get("detail") if isinstance(result, dict) else None
+        if status == HTTPStatus.TOO_MANY_REQUESTS or status >= 500:
+            # An outage or rate limit, even with a JSON body: never report it as
+            # a wrong code. Raises PulseServiceTemporarilyUnavailableError, with
+            # the Retry-After time, for 429 and 503, else
+            # PulseServerConnectionError. Not retried: an OTP may work only once.
+            LOG.error(
+                "Pulse MFA command %s returned HTTP %s: %s",
+                href,
+                status,
+                mask_mfa_secrets(detail, *secrets_to_mask),
+            )
+            self._handle_http_errors(
+                (
+                    status,
+                    mask_mfa_secrets(detail, *secrets_to_mask),
+                    URL(url),
+                    retry_header,
+                )
+            )
+        if result is None:
             # not an answer to the command, such as a gateway error page
             raise PulseServerConnectionError(
                 f"MFA command {href} returned HTTP {status}, not JSON",
                 self._connection_status.get_backoff(),
-            ) from ex
+            )
         if status != 200 or not isinstance(result, dict):
-            detail = result.get("detail") if isinstance(result, dict) else None
-            LOG.error("Pulse MFA command %s returned HTTP %s: %s", href, status, detail)
+            # HTTP 4xx: Pulse refused the command, such as 400 for a wrong code
+            # or 409 for a device name already in use
+            LOG.error(
+                "Pulse MFA command %s returned HTTP %s: %s",
+                href,
+                status,
+                mask_mfa_secrets(
+                    detail if detail is not None else result, *secrets_to_mask
+                ),
+            )
             raise _PulseMFACommandError(status)
         return result
+
+    def _pre_auth_token_for_logs(self) -> str | None:
+        """Return the pending pre-auth token, to mask it in logs."""
+        challenge = self._mfa_challenge
+        return challenge.pre_auth_token if challenge is not None else None
 
     async def _async_mfa_command(self, name: str) -> dict:
         """Return the MFA command the server currently offers under name."""
@@ -356,6 +420,9 @@ class PulseConnection(PulseQueryManager):
         Raises:
             PulseNotLoggedInError: if no MFA challenge is pending
             PulseAuthenticationError: if Pulse refuses the request
+            PulseServerConnectionError: if Pulse fails, such as an HTTP 5xx
+            PulseServiceTemporarilyUnavailableError: if Pulse answers HTTP 429
+                or 503, or asked earlier to wait and that time has not passed
 
         """
         command = await self._async_mfa_command("requestOtpForRegisteredProperty")
@@ -367,8 +434,13 @@ class PulseConnection(PulseQueryManager):
                 raise PulseAuthenticationError()
             method_id = ids[0]
         sent = await self._async_mfa_query(command["action"], "POST", {"id": method_id})
+        # The portal answers a sent code with {"code": 0, "detail": "OK"}, as
+        # observed on the live portal; anything else means no code was sent.
         if sent.get("detail") != "OK":
-            LOG.error("Pulse did not send an MFA verification code: %s", sent)
+            LOG.error(
+                "Pulse did not send an MFA verification code: %s",
+                mask_mfa_secrets(sent, self._pre_auth_token_for_logs()),
+            )
             raise PulseAuthenticationError()
         return method_id
 
@@ -393,6 +465,9 @@ class PulseConnection(PulseQueryManager):
             PulseNotLoggedInError: if no MFA challenge is pending, or the login
                 fails after the code was accepted (start over)
             PulseAuthenticationError: if Pulse rejects the code
+            PulseServerConnectionError: if Pulse fails, such as an HTTP 5xx
+            PulseServiceTemporarilyUnavailableError: if Pulse answers HTTP 429
+                or 503, or asked earlier to wait and that time has not passed
 
         """
         command = await self._async_mfa_command("validateOtp")
@@ -400,8 +475,16 @@ class PulseConnection(PulseQueryManager):
             command["action"], "POST", {"otp": code.strip()}
         )
         x_token = validated.get("detail")
+        # The portal answers an accepted code with the X-token in "detail": a
+        # signed string ending in "sig=...", as observed on the live portal.
+        # Anything else means the code was not accepted.
         if not isinstance(x_token, str) or "sig=" not in x_token:
-            LOG.error("Pulse rejected the MFA verification code")
+            LOG.error(
+                "Pulse rejected the MFA verification code: %s",
+                mask_mfa_secrets(
+                    validated, self._pre_auth_token_for_logs(), code.strip()
+                ),
+            )
             raise PulseAuthenticationError()
         # Pulse offers addTrustedDevice only once the code is validated, and the
         # web client sends the name URL-encoded inside the form body.
@@ -421,11 +504,18 @@ class PulseConnection(PulseQueryManager):
             except _PulseMFACommandError as ex:
                 if ex.status == HTTPStatus.CONFLICT:
                     continue
-            except PulseServerConnectionError:
+            # a server error, rate limit or timeout; any Retry-After it carried
+            # still applies to the sign-in below
+            except PulseConnectionError:
                 pass
             break
+        # The portal answers a trusted device with {"code": 0, "detail": "OK"},
+        # as observed on the live portal.
         if trusted.get("detail") != "OK":
-            LOG.warning("Pulse did not trust this device: %s", trusted)
+            LOG.warning(
+                "Pulse did not trust this device: %s",
+                mask_mfa_secrets(trusted, self._pre_auth_token_for_logs(), x_token),
+            )
         # the code is spent: a retry after a failure below must start over
         self._mfa_challenge = None
         response = await self.async_query(

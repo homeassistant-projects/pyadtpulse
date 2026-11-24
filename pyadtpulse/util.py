@@ -3,7 +3,7 @@
 import sys
 import string
 import logging
-from random import randint
+import secrets
 from datetime import datetime, timedelta
 from threading import RLock, current_thread
 
@@ -90,11 +90,11 @@ def generate_random_fingerprint() -> str:
         str: a fingerprint string
 
     """
-    fingerprint = [
-        ALLOWABLE_CHARACTERS[(randint(0, FINGERPRINT_RANGE_LEN - 1))]
-        for i in range(FINGERPRINT_LENGTH)
-    ]
-    return "".join(fingerprint)
+    # The fingerprint identifies a trusted device that can skip MFA, so it
+    # comes from a cryptographically secure generator.
+    return "".join(
+        secrets.choice(ALLOWABLE_CHARACTERS) for _ in range(FINGERPRINT_LENGTH)
+    )
 
 
 class DebugRLock:

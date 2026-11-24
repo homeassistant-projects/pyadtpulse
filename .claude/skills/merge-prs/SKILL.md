@@ -38,6 +38,13 @@ never `--admin`.
 - Report a table of PR, merge commit, and master CI result. Say plainly if a
   run hadn't finished when you last looked.
 
+## Base branch
+
+Merging into `master` releases automatically. A PR with a breaking commit (`!`
+or `BREAKING CHANGE:`) must target `dev`, not `master`: stop and say so if one
+targets `master`. Check with `gh pr view <n> --json baseRefName,commits`.
+Merging into `dev` releases nothing.
+
 ## Order
 
 Merge in the order the maintainer gave. If none was given, merge build and CI
