@@ -26,6 +26,7 @@ from .exceptions import (
     PulseMFARequiredError,
     PulseNotLoggedInError,
     PulseAccountLockedError,
+    PulseExceptionWithRetry,
     PulseAuthenticationError,
     PulseGatewayOfflineError,
     PulseClientConnectionError,
@@ -98,7 +99,7 @@ class PyADTPulseAsync:
                         maxiumum is ADT_MAX_KEEPALIVE_INTERVAL
             relogin_interval (int, optional): number of minutes between relogin checks
                         defaults to ADT_DEFAULT_RELOGIN_INTERVAL,
-                        minimum is ADT_MIN_RELOGIN_INTERVAL
+                        minimum is ADT_MIN_RELOGIN_INTERVAL, 0 disables relogin
             detailed_debug_logging (bool, optional): enable detailed debug logging
 
         """
@@ -191,8 +192,8 @@ class PyADTPulseAsync:
             if temp is not None:
                 signout_link = str(temp.get("href"))
             if signout_link:
-                m = re.search("networkid=(.+)&", signout_link)
-                if m and m.group(1) and m.group(1):
+                m = re.search("networkid=([^&]+)&", signout_link)
+                if m and m.group(1):
                     site_id = m.group(1)
                     LOG.debug("Discovered site id %s: %s", site_id, site_name)
                     new_site = ADTPulseSite(self._pulse_connection, site_id, site_name)
@@ -267,7 +268,9 @@ class PyADTPulseAsync:
             return await self._pulse_connection.async_query(ADT_TIMEOUT_URI, "POST")
 
         async def update_gateway_device_if_needed() -> None:
-            if self.site.gateway.next_update < time.time():
+            # next_update is None when Pulse doesn't report a next update time
+            next_update = self.site.gateway.next_update
+            if next_update is None or next_update < time.time():
                 await self.site.set_device(ADT_GATEWAY_STRING)
 
         # randint only adds jitter to the relogin and logout times, so it
@@ -325,46 +328,73 @@ class PyADTPulseAsync:
                     try:
                         await self._login_looped(task_name)
                     except (PulseAuthenticationError, PulseMFARequiredError) as ex:
-                        LOG.error("%s task exiting due to %s", task_name, ex.args[0])
+                        LOG.error("%s task exiting due to %s", task_name, ex)
+                        # wake wait_for_update so the caller can reauthenticate
+                        self._set_update_exception(ex)
                         return
                     continue
                 LOG.debug("Resetting timeout")
                 try:
                     code, response, url = await reset_pulse_cloud_timeout()
+                    if (
+                        not handle_response(
+                            code,
+                            url,
+                            logging.WARNING,
+                            "Could not reset ADT Pulse cloud timeout",
+                        )
+                        or response is None
+                    ):
+                        continue
+                    await update_gateway_device_if_needed()
                 except (
                     PulseServiceTemporarilyUnavailableError,
                     PulseClientConnectionError,
                     PulseServerConnectionError,
+                    PulseNotLoggedInError,
                 ) as ex:
                     LOG.debug(
                         "Could not reset ADT Pulse cloud timeout due to %s, skipping",
-                        ex.args[0],
+                        ex,
                     )
                     continue
-                if (
-                    not handle_response(
-                        code,
-                        url,
-                        logging.WARNING,
-                        "Could not reset ADT Pulse cloud timeout",
-                    )
-                    or response is None
-                ):
-                    continue
-                await update_gateway_device_if_needed()
 
             except asyncio.CancelledError:
                 LOG.debug("%s cancelled", task_name)
                 return
+            except Exception as ex:
+                # Never let the task die silently: a dead task would leave
+                # wait_for_update() blocked forever.
+                LOG.exception("%s exiting due to unexpected error", task_name)
+                self._set_update_exception(ex)
+                return
+
+    @staticmethod
+    def _log_task_result(task: asyncio.Task) -> None:
+        """Retrieve a finished task's result so a failure is logged, not raised."""
+        if task.cancelled():
+            return
+        ex = task.exception()
+        if ex is not None:
+            LOG.error("%s ended with an unexpected error", task.get_name(), exc_info=ex)
 
     async def _clean_done_tasks(self) -> None:
+        """
+        Forget finished tasks.
+
+        A task that ended with an exception is still cleared (and the
+        exception logged), so it can be restarted instead of re-raising
+        on every call.
+        """
         with self._pa_attribute_lock:
             if self._sync_task is not None and self._sync_task.done():
-                await self._sync_task
+                task = self._sync_task
                 self._sync_task = None
+                self._log_task_result(task)
             if self._timeout_task is not None and self._timeout_task.done():
-                await self._timeout_task
+                task = self._timeout_task
                 self._timeout_task = None
+                self._log_task_result(task)
 
     async def _cancel_task(self, task: asyncio.Task | None) -> None:
         """
@@ -375,7 +405,8 @@ class PyADTPulseAsync:
 
         """
         await self._clean_done_tasks()
-        if task is None:
+        if task is None or task.done():
+            # a finished task was already cleared by _clean_done_tasks
             return
         task_name = task.get_name()
         LOG.debug("cancelling %s", task_name)
@@ -384,6 +415,8 @@ class PyADTPulseAsync:
             await task
         except asyncio.CancelledError:
             pass
+        except Exception:
+            LOG.exception("%s raised while being cancelled", task_name)
         if task == self._sync_task:
             with self._pa_attribute_lock:
                 self._sync_task = None
@@ -402,6 +435,10 @@ class PyADTPulseAsync:
         Returns:
             None
 
+        Raises:
+            PulseAuthenticationError: if the credentials are rejected
+            PulseMFARequiredError: if Pulse asks for a verification code
+
         """
         count = 0
         log_level = logging.DEBUG
@@ -416,17 +453,33 @@ class PyADTPulseAsync:
             except (
                 PulseClientConnectionError,
                 PulseServerConnectionError,
+                PulseServiceTemporarilyUnavailableError,
+                PulseAccountLockedError,
             ) as ex:
                 LOG.log(
                     log_level,
                     "loop login in task %s received exception %s, retrying",
                     task_name,
-                    ex.args[0],
+                    ex,
                 )
                 if (
                     log_level == logging.WARNING and self._sync_check_exception is None
                 ) or self._sync_check_exception != ex:
                     self._set_update_exception(ex)
+                if isinstance(ex, PulseExceptionWithRetry):
+                    # async_login raises these at once until the retry time
+                    # passes, so wait for it instead of spinning
+                    await ex.backoff.wait_for_backoff()
+                continue
+            except PulseNotLoggedInError as ex:
+                LOG.log(
+                    log_level,
+                    "loop login in task %s received exception %s, retrying",
+                    task_name,
+                    ex,
+                )
+                # async_do_login_query waits on the login backoff
+                self._pulse_connection.login_backoff.increment_backoff()
                 continue
             # success, return
             return
@@ -497,6 +550,7 @@ class PyADTPulseAsync:
                 except (
                     PulseClientConnectionError,
                     PulseServerConnectionError,
+                    PulseServiceTemporarilyUnavailableError,
                     PulseGatewayOfflineError,
                 ) as e:
                     LOG.debug("Pulse update failed in task %s due to %s", task_name, e)
@@ -611,6 +665,17 @@ class PyADTPulseAsync:
             except asyncio.CancelledError:
                 LOG.debug("%s cancelled", task_name)
                 return
+            except (PulseAuthenticationError, PulseMFARequiredError) as ex:
+                # raised by _login_looped() from one of the handlers above
+                LOG.error("Task %s exiting due to error: %s", task_name, ex)
+                await shutdown_task(ex)
+                return
+            except Exception as ex:
+                # Never let the task die silently: a dead task would leave
+                # wait_for_update() blocked forever.
+                LOG.exception("%s exiting due to unexpected error", task_name)
+                self._set_update_exception(ex)
+                return
 
     async def async_login(self) -> None:
         """
@@ -714,16 +779,18 @@ class PyADTPulseAsync:
 
     async def async_logout(self) -> None:
         """Logout of ADT Pulse async."""
+        if asyncio.current_task() not in (self._sync_task, self._timeout_task):
+            # stop the tasks even if a login is in progress, so that
+            # nothing keeps running after the caller unloads
+            self._set_update_exception(PulseNotLoggedInError())
+            await self._cancel_task(self._timeout_task)
+            await self._cancel_task(self._sync_task)
         if self._pulse_connection.login_in_progress:
-            LOG.debug("Login in progress, returning")
+            LOG.debug("Login in progress, not sending logout")
             return
         LOG.info(
             "Logging %s out of ADT Pulse", self._authentication_properties.username
         )
-        if asyncio.current_task() not in (self._sync_task, self._timeout_task):
-            self._set_update_exception(PulseNotLoggedInError())
-            await self._cancel_task(self._timeout_task)
-            await self._cancel_task(self._sync_task)
         try:
             site_id = self.site.id
         except (RuntimeError, ValueError):
@@ -770,8 +837,11 @@ class PyADTPulseAsync:
         """
         # FIXME?: This code probably won't work with multiple waiters.
         await self._clean_done_tasks()
-        if self.sync_check_exception:
-            raise self.sync_check_exception
+        if (pending_exception := self.sync_check_exception) is not None:
+            # consume it, so the next call waits instead of raising it again
+            self.sync_check_exception = None
+            self._pulse_properties.updates_exist.clear()
+            raise pending_exception
         with self._pa_attribute_lock:
             if self._timeout_task is None:
                 raise PulseNotLoggedInError()
