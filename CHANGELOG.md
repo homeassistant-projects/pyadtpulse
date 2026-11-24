@@ -1,3 +1,30 @@
+## 3.0.0 (2026-11-24)
+
+### BREAKING CHANGE
+
+- the debug_locks parameter is removed from PyADTPulseAsync,
+PulseBackoff, PulseConnection, PulseConnectionStatus, PulseConnectionProperties,
+PulseQueryManager, PulseAuthenticationProperties, PyADTPulseProperties and
+ADTPulseSiteProperties, along with PulseConnection.debug_locks,
+PulseConnectionProperties.debug_locks, util.DebugRLock and
+util.set_debug_lock. PulseConnectionStatus's first positional parameter is
+now detailed_debug_logging.
+- set_device, fetch_devices, quick_logout, query_orb and
+clear_session are renamed with an async_ prefix. wait_for_update and
+wait_for_backoff are renamed too, and the old names raise a
+DeprecationWarning.
+- PulseNotLoggedInError subclasses PulseConnectionError
+instead of PulseLoginException, so except PulseLoginException no longer
+catches it.
+- PyADTPulseAsync.sites is removed. Use PyADTPulseAsync.site.
+
+### Refactor
+
+- remove the threading locks and the debug_locks option
+- give every public coroutine the async_ prefix
+- make PulseNotLoggedInError a connection error, not a login error
+- remove the deprecated PyADTPulseAsync.sites
+
 ## 2.0.0 (2026-11-24)
 
 ### BREAKING CHANGE
