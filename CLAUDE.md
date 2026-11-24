@@ -19,6 +19,7 @@ uv run --no-dev --frozen pytest --isolate       # the test suite exactly as CI r
 uv run pytest tests/test_pulse_mfa.py           # one file (plain pytest also passes locally)
 uv run ruff check                               # lint (CI: validate.yaml)
 uv run ruff format --check                      # format check (CI: validate.yaml)
+uv run deptry .                                 # imports vs. declared dependencies
 uv run pre-commit install                       # once per clone
 ```
 
