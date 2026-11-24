@@ -5,27 +5,48 @@ on:
   pull_request:
     branches: ["master"]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
     permissions:
-      # required for all workflows
+      contents: read
+      # Needed to upload SARIF to code scanning. Fork PRs never get this
+      # permission, so the SARIF steps are skipped for them.
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: true
 
-      - name: Sync uv
-        run: |
-          uv sync
-
-      - name: Run Bandit
-        run: |
-          uv run --only-group bandit bandit --configfile pyproject.toml --recursive . --format sarif --output results.sarif || true
+      # --only-group installs just Bandit, not the project and its deps.
+      - name: Run Bandit (SARIF report)
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        run: >-
+          uv run --only-group bandit bandit --configfile pyproject.toml
+          --recursive . --format sarif --output results.sarif --exit-zero
 
       - name: Upload SARIF report
-        uses: github/codeql-action/upload-sarif@v4
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           sarif_file: results.sarif
+
+      # Fail the job on medium or high findings. The SARIF report above still
+      # lists the low-severity ones in code scanning. Runs last so the upload
+      # happens even when this step fails.
+      - name: Run Bandit
+        run: >-
+          uv run --only-group bandit bandit --configfile pyproject.toml
+          --recursive . --severity-level medium
