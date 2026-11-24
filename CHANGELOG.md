@@ -1,3 +1,12 @@
+## 1.3.2 (2026-11-24)
+
+### Fix
+
+- harden login and logout state in PulseConnection
+- retry recoverable HTTP errors and harden async_query error handling
+- keep gateway attributes typed when the portal value is missing
+- don't crash parsing a summary page without an alarm status
+
 ## 1.3.1 (2026-11-24)
 
 ### Fix
