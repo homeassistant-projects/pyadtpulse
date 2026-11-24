@@ -43,9 +43,9 @@ one package anyway:
 uv lock --exclude-newer-package "NAME=0 days"
 ```
 
-`pre-commit install` makes `.git/hooks/pre-commit` run the hooks from your `.venv`: ruff
-lint and format, YAML/TOML/JSON checks, and a check that blocks commits straight to
-`master`. Work on a branch.
+`pre-commit install` installs the hooks from your `.venv`: ruff lint and format, YAML/TOML/JSON
+checks, a check that blocks commits straight to `master` (work on a branch), and a
+commit-msg hook that rejects messages that aren't conventional commits.
 
 ### Running Scripts
 
@@ -107,24 +107,30 @@ is `3.13.4`, there will be issues.
 
 ## 🚀 Releasing
 
-Releases are published to [PyPI](https://pypi.org/p/pyadtpulse) by
-`.github/workflows/pypi-publish.yml` when a version tag is pushed.
+Releases are automatic. Every push to `master` runs `.github/workflows/pypi-publish.yml`,
+which runs the tests, then uses [Commitizen](https://commitizen-tools.github.io/commitizen/)
+to read the commits since the last tag:
 
-1. Open a PR that bumps `version` in `pyproject.toml` to the new version (it's the only
-   place the version is set) and moves the `Unreleased` entries in `CHANGELOG.md` under a
-   heading for it. Merge it once CI passes.
-2. Tag the merge commit on `master` with the version, exactly `X.Y.Z` (for example `1.2.15`,
-   no `v` prefix), and push the tag:
+| Commit type | Release |
+|---|---|
+| `feat:` | minor (1.3.0 → 1.4.0) |
+| `fix:`, `perf:`, `refactor:` | patch (1.3.0 → 1.3.1) |
+| `BREAKING CHANGE:` footer or `!` after the type | major |
+| `docs:`, `ci:`, `build:`, `chore:`, `test:`, `style:` | no release |
 
-   ```bash
-   git tag 1.2.15
-   git push origin 1.2.15
-   ```
+If there's something to release, the workflow bumps `version` in `pyproject.toml` (the only
+place the version is set), adds a section to `CHANGELOG.md`, commits
+`bump: version X → Y` to `master`, tags it `X.Y.Z` (no `v`), creates the GitHub release, and
+publishes to PyPI with trusted publishing (the `pypi` environment). Don't edit the version
+or the changelog by hand.
 
-3. The tag push starts the workflow, which builds the package with `uv build` and uploads it
-   with PyPI trusted publishing (the `pypi` environment), so no token is needed.
-4. Create a GitHub release for the tag; its generated notes are the format `CHANGELOG.md`
-   uses.
+Because the version comes from commit messages, every commit must be a
+[conventional commit](https://www.conventionalcommits.org/). The Validate workflow checks
+each commit in a PR, and `uv run pre-commit install` adds a commit-msg hook that checks
+locally. `uv run cz commit` writes one interactively. To preview the next release:
 
-Only a tag that matches `X.Y.Z` triggers the workflow. It can also be started by hand from
-the Actions tab, but that publishes whatever version the selected branch has.
+```bash
+uv run cz bump --dry-run --yes
+```
+
+Pushing an `X.Y.Z` tag by hand still publishes that tag without a bump.
