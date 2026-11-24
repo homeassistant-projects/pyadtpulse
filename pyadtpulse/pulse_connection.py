@@ -11,7 +11,6 @@ import logging
 import secrets
 from http import HTTPStatus
 from time import time
-from asyncio import AbstractEventLoop
 from urllib.parse import quote
 
 from lxml import html, etree
@@ -591,10 +590,6 @@ class PulseConnection(PulseQueryManager):
         """Return backoff object."""
         with self._pc_attribute_lock:
             return self._login_backoff
-
-    def check_sync(self, message: str) -> AbstractEventLoop:
-        """Check if run from sync context (Convenience method)."""
-        return self._connection_properties.check_sync(message)
 
     @property
     def debug_locks(self):

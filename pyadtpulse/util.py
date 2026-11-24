@@ -4,8 +4,6 @@ import sys
 import string
 import logging
 import secrets
-from base64 import urlsafe_b64encode
-from pathlib import Path
 from datetime import datetime, timedelta
 from threading import RLock, current_thread
 
@@ -97,24 +95,6 @@ def generate_random_fingerprint() -> str:
     return "".join(
         secrets.choice(ALLOWABLE_CHARACTERS) for _ in range(FINGERPRINT_LENGTH)
     )
-
-
-def generate_fingerprint_from_browser_json(filename: str) -> str:
-    """
-    Generate a browser fingerprint from a JSON file.
-
-    Args:
-        filename (str): JSON file containing fingerprint information
-
-    Returns:
-        str: the fingerprint
-
-    """
-    data = Path(filename).read_text(encoding="utf-8")
-    # Pulse just calls JSON.Stringify() and btoa() in javascript, so we need to
-    # do this to emulate that
-    data2 = "".join(data.split())
-    return str(urlsafe_b64encode(data2.encode("utf-8")), "utf-8")
 
 
 class DebugRLock:

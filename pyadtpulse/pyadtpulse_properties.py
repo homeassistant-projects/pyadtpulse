@@ -2,11 +2,9 @@
 
 import asyncio
 import logging
-from warnings import warn
 
 from typeguard import typechecked
 
-from .site import ADTPulseSite
 from .util import set_debug_lock
 from .const import (
     ADT_MIN_RELOGIN_INTERVAL,
@@ -25,7 +23,6 @@ class PyADTPulseProperties:
         "_keepalive_interval",
         "_pp_attribute_lock",
         "_relogin_interval",
-        "_site",
         "_updates_exist",
     )
 
@@ -73,7 +70,6 @@ class PyADTPulseProperties:
             debug_locks, "pyadtpulse.async_attribute_lock"
         )
 
-        self._site: ADTPulseSite | None = None
         self.keepalive_interval = keepalive_interval
         self.relogin_interval = relogin_interval
 
@@ -149,36 +145,6 @@ class PyADTPulseProperties:
         with self._pp_attribute_lock:
             self._keepalive_interval = interval
             LOG.debug("keepalive interval set to %d", self._keepalive_interval)
-
-    @property
-    def sites(self) -> list[ADTPulseSite]:
-        """Return all sites for this ADT Pulse account."""
-        warn(
-            "multiple sites being removed, use pyADTPulse.site instead",
-            PendingDeprecationWarning,
-            stacklevel=2,
-        )
-        with self._pp_attribute_lock:
-            if self._site is None:
-                raise RuntimeError(
-                    "No sites have been retrieved, have you logged in yet?"
-                )
-            return [self._site]
-
-    @property
-    def site(self) -> ADTPulseSite:
-        """Return the site associated with the Pulse login."""
-        with self._pp_attribute_lock:
-            if self._site is None:
-                raise RuntimeError(
-                    "No sites have been retrieved, have you logged in yet?"
-                )
-            return self._site
-
-    def set_update_status(self) -> None:
-        """Set updates_exist to notify wait_for_update."""
-        with self._pp_attribute_lock:
-            self.updates_exist.set()
 
     @property
     def updates_exist(self) -> asyncio.locks.Event:

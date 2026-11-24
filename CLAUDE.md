@@ -34,8 +34,8 @@ working on 3.10: for example, catch `asyncio.TimeoutError` as well as
 
 ## Layout
 
-- `pyadtpulse/pyadtpulse_async.py`: `PyADTPulseAsync`, the public client. The
-  sync `PyADTPulse` in `__init__.py` is deprecated; don't add features to it.
+- `pyadtpulse/pyadtpulse_async.py`: `PyADTPulseAsync`, the public client. There
+  is no sync client since 2.0.
 - `pyadtpulse/pulse_connection.py`: login, logout, and the MFA verification-code
   flow (helpers in `pulse_mfa.py`).
 - `pyadtpulse/pulse_query_manager.py`: every HTTP request goes through
@@ -43,7 +43,7 @@ working on 3.10: for example, catch `asyncio.TimeoutError` as well as
 - `pyadtpulse/site.py`, `zones.py`, `alarm_panel.py`, `gateway.py`: parsed
   portal state.
 - `tests/data_files/`: saved portal HTML pages used as fixtures. `conftest.py`
-  mocks the portal with aioresponses and with `PulseMockedWebServer`.
+  mocks the portal with aioresponses.
 
 ## Things that bite
 

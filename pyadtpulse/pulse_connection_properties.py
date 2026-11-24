@@ -1,7 +1,6 @@
 """Pulse connection info."""
 
 from re import search, fullmatch
-from asyncio import AbstractEventLoop
 from http.cookies import CookieError, SimpleCookie
 from urllib.parse import urlsplit
 from collections.abc import Sequence
@@ -29,7 +28,6 @@ class PulseConnectionProperties:
         "_api_version",
         "_debug_locks",
         "_detailed_debug_logging",
-        "_loop",
         "_pci_attribute_lock",
         "_session",
         "_user_agent",
@@ -90,7 +88,6 @@ class PulseConnectionProperties:
         )
         self.debug_locks = debug_locks
         self.detailed_debug_logging = detailed_debug_logging
-        self._loop: AbstractEventLoop | None = None
         self._session: ClientSession | None = None
         self.service_host = host
         self._api_version = ""
@@ -147,43 +144,6 @@ class PulseConnectionProperties:
         """Set the debug locks flag."""
         with self._pci_attribute_lock:
             self._debug_locks = value
-
-    @typechecked
-    def check_sync(self, message: str) -> AbstractEventLoop:
-        """
-        Check if sync login was performed.
-
-        Returns the loop to use for run_coroutine_threadsafe if so.
-        Raises RuntimeError with given message if not.
-        """
-        with self._pci_attribute_lock:
-            if self._loop is None:
-                raise RuntimeError(message)
-            return self._loop
-
-    @typechecked
-    def check_async(self, message: str) -> None:
-        """
-        Check if async login was performed.
-
-        Raises RuntimeError with given message if not.
-        """
-        with self._pci_attribute_lock:
-            if self._loop is not None:
-                raise RuntimeError(message)
-
-    @property
-    def loop(self) -> AbstractEventLoop | None:
-        """Get the event loop."""
-        with self._pci_attribute_lock:
-            return self._loop
-
-    @loop.setter
-    @typechecked
-    def loop(self, loop: AbstractEventLoop | None):
-        """Set the event loop."""
-        with self._pci_attribute_lock:
-            self._loop = loop
 
     @property
     def session(self) -> ClientSession:

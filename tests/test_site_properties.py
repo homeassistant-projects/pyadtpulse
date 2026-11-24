@@ -5,13 +5,7 @@ This module contains tests that verify the behavior of the ADTPulseSitePropertie
 which handles site configuration, zones, alarm panel, and gateway functionality.
 """
 
-import time
-from typing import cast
-from multiprocessing import RLock
-
-import pytest
-
-from pyadtpulse.zones import ADTPulseZones, ADTPulseZoneData, ADTPulseFlattendZone
+from pyadtpulse.zones import ADTPulseZones, ADTPulseZoneData
 from pyadtpulse.site_properties import ADTPulseSiteProperties
 
 # Constants
@@ -76,35 +70,13 @@ class TestADTPulseSiteProperties:
         """
         Test behavior when no zones are configured.
 
-        Verifies that:
-            - RuntimeError is raised when accessing zones
-            - Error occurs before any zone processing
+        Verifies that both zone accessors return an empty container instead of
+        raising.
         """
         site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
-        with pytest.raises(RuntimeError):
-            _ = site_properties.zones
-
-    def test_retrieve_site_data_while_modifying(self, mocker):
-        """
-        Test concurrent access to site data.
-
-        Args:
-            mocker: Pytest mocker fixture for mocking objects.
-
-        Verifies that:
-            - Site lock prevents concurrent access
-            - Last updated time is properly protected
-            - Thread safety mechanisms work correctly
-
-        """
-        site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
-        mocker.patch.object(site_properties, "_last_updated", 0)
-        mocker.patch.object(site_properties, "_site_lock", RLock())
-
-        with site_properties.site_lock:
-            retrieved_last_updated = site_properties.last_updated
-
-        assert retrieved_last_updated == 0
+        assert site_properties.zones == []
+        assert isinstance(site_properties.zones_as_dict, ADTPulseZones)
+        assert not site_properties.zones_as_dict
 
     def test_set_alarm_status_to_existing_status(self, mocker):
         """
@@ -120,69 +92,6 @@ class TestADTPulseSiteProperties:
         """
         site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
         mocker.patch.object(site_properties._alarm_panel, "_status", "Armed Away")
-
-    def test_check_updates_exist(self, mocker):
-        """
-        Test update existence checking.
-
-        Args:
-            mocker: Pytest mocker fixture for mocking objects.
-
-        Verifies that:
-            - Update check returns correct boolean
-            - Last update time is considered
-
-        """
-        site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
-        current_time = time.time()
-        mocker.patch.object(site_properties, "_last_updated", return_value=current_time)
-        with pytest.warns(DeprecationWarning, match="updates_may_exist"):
-            assert site_properties.updates_may_exist is False
-
-    @pytest.mark.asyncio
-    async def test_update_site_zone_data_async(self, mocker):
-        """
-        Tests asynchronous site and zone data updates.
-
-        Tests the behavior of site and zone data updates in async mode:
-        - Async update completes successfully
-        - Zone data is properly flattened
-        - Update status is correctly returned
-
-        Args:
-            mocker: Pytest mocker fixture for mocking objects.
-
-        """
-        site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
-        mock_zones = mocker.Mock()
-        flattened_zone = cast(ADTPulseFlattendZone, mocker.Mock())
-        mock_zones.flatten.return_value = [flattened_zone]
-        site_properties._zones = mock_zones
-
-        with pytest.warns(DeprecationWarning, match="updating zones"):
-            result = await site_properties.async_update()
-            assert result is False
-
-    def test_retrieve_zones_with_invalid_input(self, mocker):
-        """
-        Test zone retrieval with invalid input.
-
-        Args:
-            mocker: Pytest mocker fixture for mocking objects.
-
-        Verifies that:
-            - RuntimeError is raised for invalid zones
-            - Both access methods handle errors consistently
-
-        """
-        site_properties = ADTPulseSiteProperties(TEST_SITE_ID, TEST_SITE_NAME)
-        mocker.patch.object(site_properties, "_zones", None)
-
-        with pytest.raises(RuntimeError):
-            _ = site_properties.zones
-
-        with pytest.raises(RuntimeError):
-            _ = site_properties.zones_as_dict
 
     def test_retrieve_alarm_panel_invalid_input(self, mocker):
         """

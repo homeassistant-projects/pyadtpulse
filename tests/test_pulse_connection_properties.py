@@ -2,7 +2,6 @@
 
 import gc
 import threading
-from asyncio import AbstractEventLoop
 
 import pytest
 from yarl import URL
@@ -171,22 +170,6 @@ class TestPulseConnectionProperties:
             connection_properties.api_version = "1.0"
 
     @pytest.mark.asyncio
-    async def test_check_sync_without_setting_event_loop_raises_runtime_error(self):
-        """Test that checking sync without setting event loop raises RuntimeError."""
-        # Arrange
-        host = "https://portal.adtpulse.com"
-        user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
-        detailed_debug_logging = False
-        debug_locks = False
-        connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
-        )
-
-        # Act & Assert
-        with pytest.raises(RuntimeError):
-            connection_properties.check_sync("Sync login was not performed")
-
-    @pytest.mark.asyncio
     async def test_get_detailed_debug_logging_flag(self):
         """Test retrieving the detailed debug logging flag."""
         # Arrange
@@ -259,43 +242,6 @@ class TestPulseConnectionProperties:
         assert connection_properties.debug_locks == debug_locks
 
     @pytest.mark.asyncio
-    async def test_set_event_loop(self):
-        """Test setting the event loop property."""
-        # Arrange
-        host = "https://portal.adtpulse.com"
-        user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
-        detailed_debug_logging = False
-        debug_locks = False
-        loop = AbstractEventLoop()
-
-        # Act
-        connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
-        )
-        connection_properties.loop = loop
-
-        # Assert
-        assert connection_properties.loop == loop
-
-    @pytest.mark.asyncio
-    async def test_get_event_loop(self):
-        """Test retrieving the event loop property."""
-        # Arrange
-        host = "https://portal.adtpulse.com"
-        user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
-        detailed_debug_logging = False
-        debug_locks = False
-        connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
-        )
-
-        # Act
-        event_loop = connection_properties.loop
-
-        # Assert
-        assert event_loop is None
-
-    @pytest.mark.asyncio
     async def test_set_api_version(self):
         """Test setting API version with various valid and invalid versions."""
         # Arrange
@@ -358,25 +304,6 @@ class TestPulseConnectionProperties:
         # Assert
         assert isinstance(session, ClientSession)
         assert connection_properties._session == session
-
-    @pytest.mark.asyncio
-    async def test_check_async_after_setting_event_loop_raises_runtime_error(self):
-        """Test that checking async after setting event loop raises RuntimeError."""
-        # Arrange
-        host = "https://portal.adtpulse.com"
-        user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
-        detailed_debug_logging = False
-        debug_locks = False
-        connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
-        )
-
-        # Act
-        connection_properties.loop = AbstractEventLoop()
-
-        # Assert
-        with pytest.raises(RuntimeError):
-            connection_properties.check_async("Async login not performed")
 
 
 @pytest.mark.parametrize(

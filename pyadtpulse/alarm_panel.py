@@ -3,7 +3,6 @@
 import re
 import logging
 from time import time
-from asyncio import run_coroutine_threadsafe
 from threading import RLock
 from dataclasses import field, dataclass
 
@@ -257,77 +256,6 @@ class ADTPulseAlarmPanel:
             self._status = ADT_ALARM_ARMING
         self._last_arm_disarm = int(time())
         return True
-
-    @typechecked
-    def _sync_set_alarm_mode(
-        self,
-        connection: PulseConnection,
-        mode: str,
-        force_arm: bool = False,
-    ) -> bool:
-        coro = self._arm(connection, mode, force_arm)
-        return run_coroutine_threadsafe(
-            coro,
-            connection.check_sync(
-                "Attempting to sync change alarm mode from async session"
-            ),
-        ).result()
-
-    @typechecked
-    def arm_away(self, connection: PulseConnection, force_arm: bool = False) -> bool:
-        """
-        Arm the alarm in Away mode.
-
-        Args:
-            connection (PulseConnection): the connection to use
-            force_arm (bool, Optional): force system to arm
-
-        Returns:
-            bool: True if arm succeeded
-
-        """
-        return self._sync_set_alarm_mode(connection, ADT_ALARM_AWAY, force_arm)
-
-    @typechecked
-    def arm_night(self, connection: PulseConnection, force_arm: bool = False) -> bool:
-        """
-        Arm the alarm in Night mode.
-
-        Args:
-            connection (PulseConnection): the connection to use
-            force_arm (bool, Optional): force system to arm
-
-        Returns:
-            bool: True if arm succeeded
-
-        """
-        return self._sync_set_alarm_mode(connection, ADT_ALARM_NIGHT, force_arm)
-
-    @typechecked
-    def arm_home(self, connection: PulseConnection, force_arm: bool = False) -> bool:
-        """
-        Arm the alarm in Home mode.
-
-        Args:
-            connection (PulseConnection): the connection to use
-            force_arm (bool, Optional): force system to arm
-
-        Returns:
-            bool: True if arm succeeded
-
-        """
-        return self._sync_set_alarm_mode(connection, ADT_ALARM_HOME, force_arm)
-
-    @typechecked
-    def disarm(self, connection: PulseConnection) -> bool:
-        """
-        Disarm the alarm.
-
-        Returns:
-            bool: True if disarm succeeded
-
-        """
-        return self._sync_set_alarm_mode(connection, ADT_ALARM_OFF, False)
 
     @typechecked
     async def async_arm_away(

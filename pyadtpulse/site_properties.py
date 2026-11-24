@@ -1,12 +1,11 @@
 """Pulse Site Properties."""
 
-from warnings import warn
 from threading import RLock
 
 from typeguard import typechecked
 
 from .util import DebugRLock, set_debug_lock
-from .zones import ADTPulseZones, ADTPulseFlattendZone
+from .zones import ADTPulseZones, ADTPulseFlattenedZone
 from .gateway import ADTPulseGateway
 from .alarm_panel import ADTPulseAlarmPanel
 
@@ -74,43 +73,28 @@ class ADTPulseSiteProperties:
             return self._last_updated
 
     @property
-    def site_lock(self) -> "RLock| DebugRLock":
-        """
-        Get thread lock for site data.
-
-        Not needed for async
-
-        Returns:
-            RLock: thread RLock
-
-        """
-        return self._site_lock
-
-    @property
-    def zones(self) -> list[ADTPulseFlattendZone] | None:
+    def zones(self) -> list[ADTPulseFlattenedZone]:
         """
         Return all zones registered with the ADT Pulse account.
 
-        (cached copy of last fetch)
-        See Also fetch_zones()
+        Returns:
+            list[ADTPulseFlattenedZone]: the cached zones from the last fetch,
+                empty if the site has none
+
         """
         with self._site_lock:
-            if not self._zones:
-                raise RuntimeError("No zones exist")
             return self._zones.flatten()
 
     @property
-    def zones_as_dict(self) -> ADTPulseZones | None:
+    def zones_as_dict(self) -> ADTPulseZones:
         """
         Return zone information in dictionary form.
 
         Returns:
-            ADTPulseZones: all zone information
+            ADTPulseZones: all zone information, empty if the site has none
 
         """
         with self._site_lock:
-            if not self._zones:
-                raise RuntimeError("No zones exist")
             return self._zones
 
     @property
@@ -134,50 +118,3 @@ class ADTPulseSiteProperties:
 
         """
         return self._gateway
-
-    @property
-    def updates_may_exist(self) -> bool:
-        """
-        Query whether updated sensor data exists.
-
-        Deprecated, use method on pyADTPulse object instead
-        """
-        # FIXME: this should actually capture the latest version
-        # and compare if different!!!
-        # ...this doesn't actually work if other components are also checking
-        #  if updates exist
-        warn(
-            "updates_may_exist on site object is deprecated, "
-            "use method on pyADTPulse object instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return False
-
-    async def async_update(self) -> bool:
-        """
-        Force update site/zone data async with current data.
-
-        Deprecated, use method on pyADTPulse object instead
-        """
-        warn(
-            "updating zones from site object is deprecated, "
-            "use method on pyADTPulse object instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return False
-
-    def update(self) -> bool:
-        """
-        Force update site/zones with current data.
-
-        Deprecated, use method on pyADTPulse object instead
-        """
-        warn(
-            "updating zones from site object is deprecated, "
-            "use method on pyADTPulse object instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return False

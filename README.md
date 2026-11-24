@@ -111,8 +111,6 @@ await site.async_arm_away(force_arm=True)  # arm even with open zones
 
 Each returns `True` if ADT accepted the command.
 
-See [example-client.py](example-client.py) for a larger example.
-
 ## Verification code (MFA) login
 
 ADT trusts a device by its fingerprint. The first login with a fingerprint ADT doesn't
@@ -217,11 +215,36 @@ adt.site.gateway.poll_interval = 2.0  # seconds between update checks (the defau
 `poll_interval` belongs to the site's gateway and is only available after login. When the
 gateway goes offline, pyadtpulse backs off from it, up to 10 minutes between checks.
 
-### Deprecated: `PyADTPulse`
+## Upgrading to 2.0
 
-`PyADTPulse` is the old synchronous client. It runs `PyADTPulseAsync` in a background
-thread and raises a `DeprecationWarning` when created. Use `PyADTPulseAsync` for new
-code.
+pyadtpulse 2.0 removes code that was deprecated or never worked:
+
+- The synchronous `PyADTPulse` client, along with the sync `ADTPulseSite` methods
+  `arm_home()`, `arm_away()`, `disarm()` and `update_zones()`. Use `PyADTPulseAsync`
+  and the site's `async_arm_home()`, `async_arm_away()`, `async_arm_night()` and
+  `async_disarm()` methods instead.
+- `util.generate_fingerprint_from_browser_json()`. Pass the fingerprint string itself
+  (see [Fingerprint](#fingerprint)).
+- The deprecated `ADTPulseSite` members `updates_may_exist`, `update()`,
+  `async_update()` and `site_lock`. `PyADTPulseAsync.wait_for_update()` reports
+  updates.
+- `ADTPulseZones.update_status()`, `update_state()` and
+  `update_last_activity_timestamp()`. Use `update_device_info()`.
+- `PyADTPulseAsync.sync_check_exception`, which was documented as internal.
+- The event-loop helpers left from the sync client: `check_sync()`, `check_async()`
+  and `loop` on `PulseConnectionProperties`, and `PulseConnection.check_sync()`.
+- The unused constants `ADT_ZONES_URI`, `ADT_STATES_URI`, `ADT_ARM_URI`, `STATE_OPEN`,
+  `STATE_MOTION`, `STATE_TAMPER`, `STATE_ALARM`, `STATE_UNKNOWN` and `ADT_SENSOR_*`.
+
+Other changes:
+
+- `ADTPulseFlattendZone` is renamed `ADTPulseFlattenedZone`.
+- `PyADTPulseAsync.sites` now raises a `DeprecationWarning` and will be removed in 3.0.
+  Use `PyADTPulseAsync.site`.
+- `wait_for_update()` returns a `PulseUpdate` named tuple with `alarm_changed` and
+  `updated_zones` fields. It still unpacks and indexes like the old tuple.
+- `ADTPulseSite.zones` and `zones_as_dict` return an empty list or `ADTPulseZones`
+  when the site has no zones, instead of raising `RuntimeError`.
 
 ## See Also
 
