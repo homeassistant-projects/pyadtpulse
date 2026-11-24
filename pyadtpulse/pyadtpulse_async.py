@@ -5,6 +5,7 @@ import time
 import asyncio
 import logging
 from random import randint
+from typing import NamedTuple
 from warnings import warn
 
 from lxml import html
@@ -46,6 +47,15 @@ KEEPALIVE_TASK_NAME = "ADT Pulse Keepalive Task"
 # backoff time before warning in wait_for_update()
 WARN_TRANSIENT_FAILURE_THRESHOLD = 2
 FULL_LOGOUT_INTERVAL = 6 * 60 * 60
+
+
+class PulseUpdate(NamedTuple):
+    """What changed, as returned by PyADTPulseAsync.wait_for_update()."""
+
+    alarm_changed: bool
+    """True if the alarm panel's status changed."""
+    updated_zones: set[int]
+    """Ids of the zones whose state or status changed."""
 
 
 class PyADTPulseAsync:
@@ -252,7 +262,7 @@ class PyADTPulseAsync:
         return self._get_task_name(self._timeout_task, KEEPALIVE_TASK_NAME)
 
     def _set_update_exception(self, e: Exception | None) -> None:
-        self.sync_check_exception = e
+        self._update_exception = e
         self._pulse_properties.updates_exist.set()
 
     async def _keepalive_task(self) -> None:  # noqa: PLR0912, PLR0915
@@ -755,9 +765,9 @@ class PyADTPulseAsync:
         if tree is None:
             await self._pulse_connection.quick_logout()
             ex = PulseNotLoggedInError()
-            self.sync_check_exception = ex
+            self._update_exception = ex
             raise ex
-        self.sync_check_exception = None
+        self._update_exception = None
         # if tasks are started, we've already logged in before
         # clean up completed tasks first
         await self._clean_done_tasks()
@@ -769,9 +779,9 @@ class PyADTPulseAsync:
             LOG.error("Could not retrieve any sites, login failed")
             await self._pulse_connection.quick_logout()
             ex = PulseNotLoggedInError()
-            self.sync_check_exception = ex
+            self._update_exception = ex
             raise ex
-        self.sync_check_exception = None
+        self._update_exception = None
         self._timeout_task = asyncio.create_task(
             self._keepalive_task(), name=KEEPALIVE_TASK_NAME
         )
@@ -820,7 +830,7 @@ class PyADTPulseAsync:
 
         return False
 
-    async def wait_for_update(self) -> tuple[bool, set[int]]:
+    async def wait_for_update(self) -> PulseUpdate:
         """
         Wait for update.
 
@@ -828,8 +838,9 @@ class PyADTPulseAsync:
         signals an update
 
         Returns:
-            tuple: (bool, set[int]):
-                True if an update was detected, set of zone ids that were updated
+            PulseUpdate: whether the alarm status changed, and the ids of the
+                zones that were updated. It is a named tuple, so
+                ``alarm_changed, zones = await pulse.wait_for_update()`` works.
 
         Raises:
             Every exception from exceptions.py are possible
@@ -837,9 +848,9 @@ class PyADTPulseAsync:
         """
         # FIXME?: This code probably won't work with multiple waiters.
         await self._clean_done_tasks()
-        if (pending_exception := self.sync_check_exception) is not None:
+        if (pending_exception := self._update_exception) is not None:
             # consume it, so the next call waits instead of raising it again
-            self.sync_check_exception = None
+            self._update_exception = None
             self._pulse_properties.updates_exist.clear()
             raise pending_exception
         with self._pa_attribute_lock:
@@ -854,28 +865,31 @@ class PyADTPulseAsync:
         old_alarm_status = self.site.alarm_control_panel.status
         await self._pulse_properties.updates_exist.wait()
         self._pulse_properties.updates_exist.clear()
-        curr_exception = self.sync_check_exception
-        self.sync_check_exception = None
+        curr_exception = self._update_exception
+        self._update_exception = None
         if curr_exception:
             raise curr_exception
         updated_zones = self._updated_zones
         self._updated_zones = set()
-        return (self.site.alarm_control_panel.status != old_alarm_status, updated_zones)
+        return PulseUpdate(
+            self.site.alarm_control_panel.status != old_alarm_status, updated_zones
+        )
 
     @property
     def sites(self) -> list[ADTPulseSite]:
-        """Return all sites for this ADT Pulse account."""
+        """
+        Return all sites for this ADT Pulse account.
+
+        Deprecated: an account has one site; use site. This will be removed
+        in 3.0. It is kept in 2.0 because hass-adtpulse still reads it.
+        """
         warn(
-            "multiple sites being removed, use pyADTPulse.site instead",
-            PendingDeprecationWarning,
+            "PyADTPulseAsync.sites is deprecated and will be removed in 3.0, "
+            "use PyADTPulseAsync.site instead",
+            DeprecationWarning,
             stacklevel=2,
         )
-        with self._pa_attribute_lock:
-            if self._site is None:
-                raise RuntimeError(
-                    "No sites have been retrieved, have you logged in yet?"
-                )
-            return [self._site]
+        return [self.site]
 
     @property
     def site(self) -> ADTPulseSite:
@@ -954,29 +968,25 @@ class PyADTPulseAsync:
         self._pulse_properties.relogin_interval = interval
 
     @property
-    def sync_check_exception(self) -> Exception | None:
+    def _update_exception(self) -> Exception | None:
         """
-        Return sync check exception.
-
-        This should not be used by external code.
+        Return the exception to raise from the next wait_for_update().
 
         Returns:
-            Exception: sync check exception
+            Exception: the pending exception, or None
 
         """
         with self._pa_attribute_lock:
             return self._sync_check_exception
 
-    @sync_check_exception.setter
+    @_update_exception.setter
     @typechecked
-    def sync_check_exception(self, value: Exception | None) -> None:
+    def _update_exception(self, value: Exception | None) -> None:
         """
-        Set sync check exception.
-
-        This should not be used by external code.
+        Set the exception to raise from the next wait_for_update().
 
         Args:
-            value (Exception): sync check exception
+            value (Exception): the exception, or None to clear it
 
         """
         with self._pa_attribute_lock:

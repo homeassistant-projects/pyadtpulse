@@ -2,8 +2,8 @@
 
 import aiohttp_fast_zlib
 
-from .pyadtpulse_async import PyADTPulseAsync
+from .pyadtpulse_async import PulseUpdate, PyADTPulseAsync
 
 aiohttp_fast_zlib.enable()
 
-__all__ = ["PyADTPulseAsync"]
+__all__ = ["PulseUpdate", "PyADTPulseAsync"]
