@@ -35,7 +35,6 @@ dependencies = [
 
 
 [dependency-groups]
-bandit = ["bandit[sarif,toml]>=1.8.6"]
 dev = [
     # Exact pin: the release job in pypi-publish.yml runs this same version.
     "commitizen==4.19.4",
@@ -61,11 +60,6 @@ testing = [
     "pytest-isolate>=0.0.12",
     "pytest-mock>=3.14.1",
 ]
-
-[tool.bandit]
-exclude_dirs = ["tests", ".venv"]
-
-exclude = ["example-client.py"]
 
 [tool.uv]
 # Relative exclude-newer durations need uv 0.9.17+.
@@ -118,7 +112,12 @@ select = [
     "PL",  # pylint
     "RUF", # ruff
     "UP",  # pyupgrade
+    "S",   # flake8-bandit (security checks)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests don't ship: asserts, fake passwords and bare excepts are fine there.
+"tests/**" = ["S"]
 
 [tool.ruff.lint.pylint]
 max-args = 10

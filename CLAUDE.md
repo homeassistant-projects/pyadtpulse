@@ -28,8 +28,9 @@ There is no mypy and no coverage tooling. Runtime type checks come from
 typeguard's `@typechecked`, which the code uses widely.
 
 CI (`.github/workflows/`) runs the tests on Python 3.10 to 3.14, plus ruff
-(`validate.yaml`) and Bandit. Code must keep working on 3.10: for example, catch
-`asyncio.TimeoutError` as well as `TimeoutError`.
+(`validate.yaml`), whose `S` rules are Bandit's security checks. Code must keep
+working on 3.10: for example, catch `asyncio.TimeoutError` as well as
+`TimeoutError`.
 
 ## Layout
 
