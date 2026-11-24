@@ -89,7 +89,6 @@ module-root = ""
 line-length = 88                # Matches black
 show-fixes = true
 target-version = "py310"
-exclude = ["example-client.py"]
 
 [tool.ruff.format]
 docstring-code-format = true
