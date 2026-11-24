@@ -1,3 +1,32 @@
+## 2.0.0 (2026-11-24)
+
+### BREAKING CHANGE
+
+- PyADTPulseAsync.sync_check_exception is removed.
+- PulseConnectionProperties.check_sync(), check_async()
+and loop, and PulseConnection.check_sync(), are removed.
+- those constants are removed from pyadtpulse.const.
+- ADTPulseSiteProperties.updates_may_exist, update(),
+async_update() and site_lock, ADTPulseZones.update_status(),
+update_state() and update_last_activity_timestamp() are removed;
+ADTPulseFlattendZone is renamed ADTPulseFlattenedZone; zones and
+zones_as_dict return empty containers instead of raising RuntimeError.
+- PyADTPulse (sync) is removed; use pyadtpulse.pyadtpulse_async.PyADTPulseAsync. The sync ADTPulseSite methods arm_home(), arm_away(), disarm() and update_zones(), and the sync ADTPulseAlarmPanel methods arm_away(), arm_night(), arm_home() and disarm(), are removed too; use their async_ counterparts.
+- util.generate_fingerprint_from_browser_json() and the sample pyadtpulse/fingerprint.json are removed. They were unused example code.
+
+### Fix
+
+- stop shipping an editor settings file in the wheel
+
+### Refactor
+
+- make sync_check_exception private, return a PulseUpdate
+- remove the event-loop plumbing left from the sync client
+- remove unused constants
+- remove deprecated site and zone members, never raise on no zones
+- remove the deprecated sync PyADTPulse client
+- remove the browser-fingerprint example helper
+
 ## 1.3.3 (2026-11-24)
 
 ### Fix
