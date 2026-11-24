@@ -134,3 +134,12 @@ uv run cz bump --dry-run --yes
 ```
 
 Pushing an `X.Y.Z` tag by hand still publishes that tag without a bump.
+
+### Major releases and the `dev` branch
+
+A breaking change (`!` after the type, or a `BREAKING CHANGE:` footer) makes a major release
+as soon as it reaches `master`, so two breaking PRs merged one after the other would publish
+two majors. Breaking work therefore targets the `dev` branch instead. CI runs on PRs into
+`dev`, but nothing is released from it. When the major release is ready, open one PR from
+`dev` into `master`; merging it publishes the new major. Non-breaking fixes keep going to
+`master`; merge `master` into `dev` after each one so `dev` stays current.

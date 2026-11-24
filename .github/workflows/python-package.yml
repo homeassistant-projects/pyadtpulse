@@ -4,9 +4,9 @@ name: Test with Supported Python Versions
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "dev"]
   pull_request:
-    branches: ["master"]
+    branches: ["master", "dev"]
   workflow_call:
 
 permissions:

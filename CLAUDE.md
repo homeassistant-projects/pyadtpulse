@@ -82,6 +82,12 @@ CI (`.github/workflows/`) runs the tests on Python 3.10 to 3.14, plus ruff
   pick the type for what users get: a user-visible behavior change is `feat` or
   `fix`, never `chore`. Never edit the version or the changelog by hand.
   Validate rejects non-conventional commits in PRs.
+- **Breaking changes go to `dev`, not `master`.** Each breaking commit merged
+  to `master` would publish its own major version (2.0.0, then 3.0.0, ...). So
+  PRs with `!` or a `BREAKING CHANGE:` footer target `dev`; when the major
+  release is ready, one `dev` -> `master` PR publishes it. Non-breaking fixes go
+  straight to `master`; merge `master` into `dev` afterwards to keep it current.
+  CI runs on PRs into both branches; only `master` releases.
 - PRs from first-time contributors don't run CI until the maintainer clicks
   "Approve and run workflows" on GitHub. Don't run a contributor's branch
   locally to work around that; ask the maintainer to approve the runs, then
