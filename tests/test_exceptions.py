@@ -78,17 +78,19 @@ class TestCodeUnderTest:
 
     def test_pulse_exception_with_backoff_invalid_initialization(self):
         """Test PulseExceptionWithBackoff invalid initialization."""
-        with pytest.raises(Exception):
+        # A string has no backoff attributes.
+        with pytest.raises(AttributeError):
             PulseExceptionWithBackoff(123, "backoff")  # type: ignore
 
     def test_pulse_exception_with_retry_invalid_initialization(self):
         """Test PulseExceptionWithRetry invalid initialization."""
         backoff = PulseBackoff("test", 1.0)
-        with pytest.raises(Exception):
+        # A string retry time can't be compared with the current time.
+        with pytest.raises(TypeError):
             PulseExceptionWithRetry(123, backoff, "retry")  # type: ignore
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             PulseExceptionWithRetry("error", "backoff", time() + 10)  # type: ignore
-        with pytest.raises(Exception):
+        with pytest.raises(TypeError):
             PulseExceptionWithRetry("error", backoff, "retry")  # type: ignore
 
     def test_pulse_exception_with_retry_past_retry_time(self):
