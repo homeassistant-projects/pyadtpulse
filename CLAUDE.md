@@ -59,7 +59,8 @@ CI (`.github/workflows/`) runs the tests on Python 3.10 to 3.14, plus ruff
   same credentials logs the first one out.
 - **Test-only dependency caps** live in the `testing` group in `pyproject.toml`
   (for example `aiohttp<3.14`, because aioresponses can't mock 3.14 yet). They
-  don't apply to users. Each one has a comment saying when to remove it.
+  don't apply to users. Each one has a comment saying when to remove it, and a
+  matching `ignore` entry in `.github/dependabot.yml` that goes with it.
 - **Ruff is pinned in two places** that must match: `ruff==` in the `dev` group
   (CI's ruff-action reads it) and the ruff-pre-commit `rev` in
   `.pre-commit-config.yaml`. Bump both together. Ruff also formats Python code
