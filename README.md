@@ -217,11 +217,12 @@ adt.site.gateway.poll_interval = 2.0  # seconds between update checks (the defau
 `poll_interval` belongs to the site's gateway and is only available after login. When the
 gateway goes offline, pyadtpulse backs off from it, up to 10 minutes between checks.
 
-### Deprecated: `PyADTPulse`
+### Removed in 2.0: `PyADTPulse`
 
-`PyADTPulse` is the old synchronous client. It runs `PyADTPulseAsync` in a background
-thread and raises a `DeprecationWarning` when created. Use `PyADTPulseAsync` for new
-code.
+pyadtpulse 2.0 removed the old synchronous `PyADTPulse` client, along with the sync
+`ADTPulseSite` methods `arm_home()`, `arm_away()`, `disarm()` and `update_zones()`. Use
+`PyADTPulseAsync` and the site's `async_arm_home()`, `async_arm_away()`,
+`async_arm_night()` and `async_disarm()` methods instead.
 
 ## See Also
 

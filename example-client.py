@@ -226,9 +226,8 @@ def handle_args() -> argparse.Namespace:
 
     if args.use_async is False:
         print(
-            f"{USE_ASYNC}=False is no longer supported: the sync PyADTPulse client "
-            "is deprecated and can't log in when ADT asks for a verification code. "
-            "Using PyADTPulseAsync."
+            f"{USE_ASYNC}=False is no longer supported: pyadtpulse 2.0 removed the "
+            "sync PyADTPulse client. Using PyADTPulseAsync."
         )
 
     def default(value, fallback):
