@@ -144,11 +144,14 @@ class PulseMFARequiredError(PulseLoginException):
         self.challenge = challenge
 
 
-class PulseNotLoggedInError(PulseLoginException):
+class PulseNotLoggedInError(PulseConnectionError):
     """
     Exception to indicate that the application code is not logged in.
 
-    Used for signalling waiters.
+    Used for signalling waiters. The session ended or was never set up; the
+    credentials weren't rejected (that is PulseAuthenticationError), so
+    logging in again usually works. It is a connection error, not a
+    PulseLoginException.
     """
 
     def __init__(self):

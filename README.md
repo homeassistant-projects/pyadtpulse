@@ -220,6 +220,10 @@ gateway goes offline, pyadtpulse backs off from it, up to 10 minutes between che
 pyadtpulse 3.0 finishes the API cleanup:
 
 - `PyADTPulseAsync.sites` is removed. Use `PyADTPulseAsync.site`.
+- `PulseNotLoggedInError` subclasses `PulseConnectionError` instead of
+  `PulseLoginException`. It means the session ended, not that the credentials
+  were rejected, so `except PulseLoginException` no longer catches it. Catch it on
+  its own (or as a `PulseConnectionError`) and log in again.
 
 ## Upgrading to 2.0
 

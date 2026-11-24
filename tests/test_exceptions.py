@@ -156,10 +156,10 @@ class TestCodeUnderTest:
         assert str(exception) == expected_string
 
     def test_pulse_not_logged_in_error_inheritance(self):
-        """Test PulseNotLoggedInError inheritance."""
-        PulseBackoff("test", 1.0)
+        """A lost session is a connection error, not a login (credentials) one."""
         exception = PulseNotLoggedInError()
-        assert isinstance(exception, PulseLoginException)
+        assert isinstance(exception, PulseConnectionError)
+        assert not isinstance(exception, PulseLoginException)
 
     def test_pulse_exception_with_retry_string_representation(self):
         """Test PulseExceptionWithRetry string representation."""
