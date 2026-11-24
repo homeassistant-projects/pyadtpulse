@@ -8,8 +8,10 @@ here ships to Home Assistant users once that integration bumps its requirement.
 
 ## Commands
 
-The project uses uv. `uv.lock` is gitignored, so `uv sync` resolves the newest
-versions allowed by `pyproject.toml`.
+The project uses uv (0.9.17 or newer). `uv.lock` is gitignored because this is
+a library, so `uv sync` resolves fresh each time, skipping releases younger than
+2 days (`exclude-newer = "2 days"` in `[tool.uv]`). To try a brand-new release
+anyway: `uv lock --exclude-newer-package "NAME=0 days"`.
 
 ```bash
 uv sync                                         # create .venv with all groups
@@ -57,9 +59,10 @@ CI (`.github/workflows/`) runs the tests on Python 3.10 to 3.14, plus ruff
 - **Test-only dependency caps** live in the `testing` group in `pyproject.toml`
   (for example `aiohttp<3.14`, because aioresponses can't mock 3.14 yet). They
   don't apply to users. Each one has a comment saying when to remove it.
-- **Ruff isn't pinned** in CI, which installs the newest release. Ruff 0.17 also
-  formats Python code blocks in Markdown, so `README.md` can fail the format
-  check.
+- **Ruff is pinned in two places** that must match: `ruff==` in the `dev` group
+  (CI's ruff-action reads it) and the ruff-pre-commit `rev` in
+  `.pre-commit-config.yaml`. Bump both together. Ruff also formats Python code
+  blocks in Markdown, so `README.md` and this file go through the format check.
 - **Imports are sorted by length** (`length-sort = true` in the isort config).
   Run `uv run ruff check --fix` rather than ordering them by hand.
 
