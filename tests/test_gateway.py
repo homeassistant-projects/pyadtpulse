@@ -1,14 +1,22 @@
 """Unit tests for the ADTPulseGateway class and its related functionality."""
 
+import time
 from ipaddress import IPv4Address
 
 import pytest
+from aioresponses import aioresponses
 
+from pyadtpulse.site import ADTPulseSite
 from pyadtpulse.const import (
+    ADT_GATEWAY_URI,
+    ADT_GATEWAY_STRING,
     ADT_DEFAULT_POLL_INTERVAL,
     ADT_GATEWAY_MAX_OFFLINE_POLL_INTERVAL,
 )
 from pyadtpulse.gateway import ADTPulseGateway
+from pyadtpulse.pulse_connection import PulseConnection
+from pyadtpulse.pulse_connection_status import PulseConnectionStatus
+from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProperties
 
 
 # ADTPulseGateway object can be created with default values
@@ -97,7 +105,7 @@ def test_set_gateway_attributes_sets_attributes_correctly():
         "cellular_connection_status": "Connected",
         "broadband_lan_mac": "00:11:22:33:44:55",
         "device_lan_mac": "AA:BB:CC:DD:EE:FF",
-        "cellular_connection_signal_strength": 4.5,
+        "cellular_signal_strength": "4.5",
     }
 
     gateway.set_gateway_attributes(attributes)
@@ -315,3 +323,121 @@ def test_custom_values():
     assert gateway._device_lan_mac == "AA:BB:CC:DD:EE:FF"
     assert gateway.router_lan_ip_address == IPv4Address("192.168.1.1")
     assert gateway.router_wan_ip_address == IPv4Address("10.0.0.1")
+
+
+def test_set_gateway_attributes_unparseable_datetime_keeps_int():
+    """'N/A', empty or missing update times reset to 0 instead of None."""
+    gateway = ADTPulseGateway(next_update=1234, last_update=5678)
+    gateway.set_gateway_attributes({"next_update": "N/A", "last_update": ""})
+    assert gateway.next_update == 0
+    assert gateway.last_update == 0
+    gateway.next_update = 1234
+    gateway.set_gateway_attributes({})
+    assert gateway.next_update == 0
+    # the keepalive compares this to time.time(); None raised TypeError here
+    assert gateway.next_update < time.time()
+
+
+def test_set_gateway_attributes_missing_values_keep_defaults():
+    """Missing values reset every attribute to its declared default."""
+    gateway = ADTPulseGateway(
+        model="m", _cellular_connection_signal_strength=3.0, next_update=1
+    )
+    gateway.set_gateway_attributes({})
+    assert gateway.model is None
+    assert gateway.cellular_connection_signal_strength == 0.0
+    assert gateway.next_update == 0
+    assert gateway.last_update == 0
+    assert gateway.broadband_lan_ip_address is None
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("-71 dBm", -71.0),
+        ("4.5", 4.5),
+        ("3 bars", 3.0),
+        ("N/A", 0.0),
+        ("", 0.0),
+        ("Unknown", 0.0),
+    ],
+)
+def test_set_gateway_attributes_cellular_signal_strength(value, expected):
+    """The portal's Cellular Signal Strength row is parsed into a float."""
+    gateway = ADTPulseGateway(_cellular_connection_signal_strength=9.0)
+    gateway.set_gateway_attributes({"cellular_signal_strength": value})
+    assert gateway.cellular_connection_signal_strength == expected
+
+
+def test_set_gateway_attributes_invalid_mac_keeps_default():
+    """A MAC address the setter rejects (e.g. 'N/A') resets to None."""
+    gateway = ADTPulseGateway(_device_lan_mac="AA:BB:CC:DD:EE:FF")
+    gateway.set_gateway_attributes({"device_lan_mac": "N/A"})
+    assert gateway.device_lan_mac is None
+
+
+@pytest.fixture
+def gateway_site(get_mocked_connection_properties) -> ADTPulseSite:
+    """Site with an authenticated connection to the mocked portal."""
+    status = PulseConnectionStatus()
+    status.authenticated_flag.set()
+    connection = PulseConnection(
+        status,
+        get_mocked_connection_properties,
+        PulseAuthenticationProperties(
+            "test@example.com", "testpassword", "testfingerprint"
+        ),
+    )
+    return ADTPulseSite(connection, "160301za524548", "Robert Lippmann")
+
+
+async def load_gateway_page(site, get_mocked_url, read_file, file_name):
+    """Serve file_name as the gateway page and parse it into site.gateway."""
+    with aioresponses() as responses:
+        responses.get(
+            get_mocked_url(ADT_GATEWAY_URI),
+            body=read_file(file_name),
+            content_type="text/html",
+        )
+        await site.set_device(ADT_GATEWAY_STRING)
+    await site._pulse_connection._connection_properties.clear_session()
+    return site.gateway
+
+
+@pytest.mark.asyncio
+async def test_gateway_page(gateway_site, get_mocked_url, read_file):
+    """The saved gateway page fills the gateway attributes with typed values."""
+    gateway = await load_gateway_page(
+        gateway_site, get_mocked_url, read_file, "gateway.html"
+    )
+    assert gateway.model == "PGZNG1"
+    assert gateway.serial_number == "5U020CN3007E3"
+    assert isinstance(gateway.next_update, int)
+    assert gateway.next_update > 0
+    assert isinstance(gateway.last_update, int)
+    assert gateway.last_update > 0
+    assert gateway.primary_connection_type == "Broadband"
+    assert gateway.cellular_connection_status == "N/A"
+    assert gateway.cellular_connection_signal_strength == 0.0
+    assert gateway.broadband_lan_ip_address == IPv4Address("192.168.1.31")
+    assert gateway.device_lan_mac == "a4:11:62:35:07:97"
+
+
+@pytest.mark.asyncio
+async def test_gateway_page_cellular(gateway_site, get_mocked_url, read_file):
+    """
+    A gateway on cellular with an 'N/A' next update and MAC parses cleanly.
+
+    gateway_cellular.html is gateway.html with the Next Update row set to
+    "N/A", the connection type set to Cellular, the Cellular Signal Strength
+    row set to "-71 dBm" and the Device LAN MAC set to "N/A".
+    """
+    gateway = await load_gateway_page(
+        gateway_site, get_mocked_url, read_file, "gateway_cellular.html"
+    )
+    assert gateway.next_update == 0
+    assert gateway.last_update > 0
+    assert gateway.primary_connection_type == "Cellular"
+    assert gateway.cellular_connection_status == "Active"
+    assert gateway.cellular_connection_signal_strength == -71.0
+    assert gateway.device_lan_mac is None

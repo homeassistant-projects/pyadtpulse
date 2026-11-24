@@ -5,7 +5,7 @@ import logging
 from time import time
 from asyncio import run_coroutine_threadsafe
 from threading import RLock
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 
 from lxml import html
 from typeguard import typechecked
@@ -53,8 +53,8 @@ class ADTPulseAlarmPanel:
     manufacturer: str = "ADT"
     online: bool = True
     _is_force_armed: bool = False
-    _state_lock = RLock()
-    _last_arm_disarm: int = int(time())
+    _state_lock: RLock = field(default_factory=RLock)
+    _last_arm_disarm: int = field(default_factory=lambda: int(time()))
 
     @property
     def status(self) -> str:
@@ -167,12 +167,12 @@ class ADTPulseAlarmPanel:
             return self._status == ADT_ALARM_NIGHT
 
     @property
-    def last_update(self) -> float:
+    def last_update(self) -> int:
         """
         Return last update time.
 
         Returns:
-            float: last arm/disarm time
+            int: last arm/disarm time, in seconds since the epoch
 
         """
         with self._state_lock:
@@ -410,8 +410,10 @@ class ADTPulseAlarmPanel:
         with self._state_lock:
             status_found = False
             last_updated = int(time())
+            text = ""
             if value is not None:
-                text = value.text_content().lstrip().splitlines()[0]
+                lines = value.text_content().strip().splitlines()
+                text = lines[0] if lines else ""
 
                 for (
                     current_status,
@@ -428,8 +430,10 @@ class ADTPulseAlarmPanel:
                             self._last_arm_disarm = last_updated
                         break
 
-            if value is None or not status_found:
-                if not text.startswith("Status Unavailable"):
+            if not status_found:
+                if value is None:
+                    LOG.warning("Failed to find alarm status on the page")
+                elif not text.startswith("Status Unavailable"):
                     LOG.warning("Failed to get alarm status from '%s'", text)
                 self._status = ADT_ALARM_UNKNOWN
                 self._last_arm_disarm = last_updated
