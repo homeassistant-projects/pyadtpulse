@@ -43,7 +43,7 @@ working on 3.10: for example, catch `asyncio.TimeoutError` as well as
 - `pyadtpulse/site.py`, `zones.py`, `alarm_panel.py`, `gateway.py`: parsed
   portal state.
 - `tests/data_files/`: saved portal HTML pages used as fixtures. `conftest.py`
-  mocks the portal with aioresponses and with `PulseMockedWebServer`.
+  mocks the portal with aioresponses.
 
 ## Things that bite
 

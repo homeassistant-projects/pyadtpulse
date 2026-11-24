@@ -215,12 +215,29 @@ adt.site.gateway.poll_interval = 2.0  # seconds between update checks (the defau
 `poll_interval` belongs to the site's gateway and is only available after login. When the
 gateway goes offline, pyadtpulse backs off from it, up to 10 minutes between checks.
 
-### Removed in 2.0: `PyADTPulse`
+## Upgrading to 2.0
 
-pyadtpulse 2.0 removed the old synchronous `PyADTPulse` client, along with the sync
-`ADTPulseSite` methods `arm_home()`, `arm_away()`, `disarm()` and `update_zones()`. Use
-`PyADTPulseAsync` and the site's `async_arm_home()`, `async_arm_away()`,
-`async_arm_night()` and `async_disarm()` methods instead.
+pyadtpulse 2.0 removes code that was deprecated or never worked:
+
+- The synchronous `PyADTPulse` client, along with the sync `ADTPulseSite` methods
+  `arm_home()`, `arm_away()`, `disarm()` and `update_zones()`. Use `PyADTPulseAsync`
+  and the site's `async_arm_home()`, `async_arm_away()`, `async_arm_night()` and
+  `async_disarm()` methods instead.
+- `util.generate_fingerprint_from_browser_json()`. Pass the fingerprint string itself
+  (see [Fingerprint](#fingerprint)).
+- The deprecated `ADTPulseSite` members `updates_may_exist`, `update()`,
+  `async_update()` and `site_lock`. `PyADTPulseAsync.wait_for_update()` reports
+  updates.
+- `ADTPulseZones.update_status()`, `update_state()` and
+  `update_last_activity_timestamp()`. Use `update_device_info()`.
+- The unused constants `ADT_ZONES_URI`, `ADT_STATES_URI`, `ADT_ARM_URI`, `STATE_OPEN`,
+  `STATE_MOTION`, `STATE_TAMPER`, `STATE_ALARM`, `STATE_UNKNOWN` and `ADT_SENSOR_*`.
+
+Other changes:
+
+- `ADTPulseFlattendZone` is renamed `ADTPulseFlattenedZone`.
+- `ADTPulseSite.zones` and `zones_as_dict` return an empty list or `ADTPulseZones`
+  when the site has no zones, instead of raising `RuntimeError`.
 
 ## See Also
 
