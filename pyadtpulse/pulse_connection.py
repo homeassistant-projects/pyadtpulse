@@ -5,12 +5,18 @@ This is the main interface to the http functions to access ADT Pulse.
 """
 
 import re
+import json
+import asyncio
 import logging
+import secrets
+from http import HTTPStatus
 from time import time
 from asyncio import AbstractEventLoop
+from urllib.parse import quote
 
 from lxml import html
 from yarl import URL
+from aiohttp import ClientError, ClientTimeout
 from typeguard import typechecked
 
 from .util import make_etree, set_debug_lock
@@ -21,6 +27,7 @@ from .const import (
     ADT_MFA_FAIL_URI,
     ADT_DEFAULT_LOGIN_TIMEOUT,
 )
+from .pulse_mfa import ADT_MFA_STATE_HREF, ADT_POST_SIGNIN_URI, PulseMFAChallenge
 from .exceptions import (
     PulseMFARequiredError,
     PulseNotLoggedInError,
@@ -38,6 +45,17 @@ from .pulse_authentication_properties import PulseAuthenticationProperties
 
 LOG = logging.getLogger(__name__)
 
+# Pulse allows at most this many characters in a trusted device name
+ADT_MAX_DEVICE_NAME_LENGTH = 30
+
+
+class _PulseMFACommandError(PulseAuthenticationError):
+    """An MFA command Pulse answered with an error status."""
+
+    def __init__(self, status: int):
+        super().__init__()
+        self.status = status
+
 
 SESSION_COOKIES = {"X-mobile-browser": "false", "ICLocal": "en_US"}
 
@@ -49,6 +67,7 @@ class PulseConnection(PulseQueryManager):
         "_authentication_properties",
         "_login_backoff",
         "_login_in_progress",
+        "_mfa_challenge",
         "_pc_attribute_lock",
     )
 
@@ -80,6 +99,7 @@ class PulseConnection(PulseQueryManager):
             detailed_debug_logging=self._connection_properties.detailed_debug_logging,
         )
         self._login_in_progress = False
+        self._mfa_challenge: PulseMFAChallenge | None = None
         self._debug_locks = debug_locks
 
     @typechecked
@@ -144,7 +164,8 @@ class PulseConnection(PulseQueryManager):
                     LOG.error("Unknown error logging into pulse: no message given")
                     raise PulseNotLoggedInError()
             elif response_uri == ADT_MFA_FAIL_URI:
-                raise PulseMFARequiredError()
+                self._mfa_challenge = PulseMFAChallenge.from_page(response[1])
+                raise PulseMFARequiredError(self._mfa_challenge)
 
         tree = make_etree(
             response[0],
@@ -167,6 +188,18 @@ class PulseConnection(PulseQueryManager):
         response_version, response_uri = (
             self._connection_properties.split_versioned_url(response_url_string)
         )
+        # adopt it before anything else: MFA calls go to the landed version
+        if (
+            response_uri in (ADT_SUMMARY_URI, ADT_MFA_FAIL_URI)
+            and response_version is not None
+            and response_version != self._connection_properties.api_version
+        ):
+            LOG.debug(
+                "Pulse API version changed from %s to %s during login",
+                self._connection_properties.api_version,
+                response_version,
+            )
+            self._connection_properties.api_version = response_version
         if response_uri != ADT_SUMMARY_URI:
             determine_error_type(tree=tree)
             # if we get here we can't determine the error
@@ -176,16 +209,6 @@ class PulseConnection(PulseQueryManager):
                 response_url_string,
             )
             raise PulseAuthenticationError()
-        if (
-            response_version is not None
-            and response_version != self._connection_properties.api_version
-        ):
-            LOG.debug(
-                "Pulse API version changed from %s to %s during login",
-                self._connection_properties.api_version,
-                response_version,
-            )
-            self._connection_properties.api_version = response_version
         return tree
 
     @typechecked
@@ -255,10 +278,167 @@ class PulseConnection(PulseQueryManager):
             self.login_in_progress = False
             raise
         tree = self.check_login_errors(response)
+        self._login_succeeded()
+        return tree
+
+    def _login_succeeded(self) -> None:
+        self._mfa_challenge = None
         self._connection_status.authenticated_flag.set()
         self._authentication_properties.last_login_time = int(time())
         self._login_backoff.reset_backoff()
         self.login_in_progress = False
+
+    async def _async_mfa_query(
+        self,
+        href: str,
+        method: str = "GET",
+        data: dict[str, str] | None = None,
+        x_token: str | None = None,
+    ) -> dict:
+        """Call an MFA REST command through the Pulse proxy and decode its JSON."""
+        challenge = self._mfa_challenge
+        if challenge is None:
+            raise PulseNotLoggedInError()
+        # Not async_query: Pulse answers a rejected code with HTTP 400 and a JSON
+        # detail, which async_query would report as a server error (bumping the
+        # connection backoff), and an OTP must not be retried.
+        url = self._connection_properties.make_url(challenge.proxy_url(href))
+        try:
+            async with self._connection_properties.session.request(
+                method,
+                url,
+                headers=challenge.headers(x_token),
+                data=data if method == "POST" else None,
+                timeout=ClientTimeout(total=float(ADT_DEFAULT_LOGIN_TIMEOUT)),
+            ) as response:
+                status = response.status
+                text = await response.text()
+        # asyncio.TimeoutError is a separate class before Python 3.11
+        except (ClientError, asyncio.TimeoutError, UnicodeDecodeError) as ex:
+            raise PulseServerConnectionError(
+                f"MFA command {href} failed: {ex}",
+                self._connection_status.get_backoff(),
+            ) from ex
+        try:
+            result = json.loads(text or "")
+        except ValueError as ex:
+            # not an answer to the command, such as a gateway error page
+            raise PulseServerConnectionError(
+                f"MFA command {href} returned HTTP {status}, not JSON",
+                self._connection_status.get_backoff(),
+            ) from ex
+        if status != 200 or not isinstance(result, dict):
+            detail = result.get("detail") if isinstance(result, dict) else None
+            LOG.error("Pulse MFA command %s returned HTTP %s: %s", href, status, detail)
+            raise _PulseMFACommandError(status)
+        return result
+
+    async def _async_mfa_command(self, name: str) -> dict:
+        """Return the MFA command the server currently offers under name."""
+        state = await self._async_mfa_query(ADT_MFA_STATE_HREF)
+        command = state.get("commands", {}).get(name)
+        if not command or not command.get("action"):
+            LOG.error("Pulse did not offer the MFA command %s", name)
+            raise PulseAuthenticationError()
+        return command
+
+    async def async_request_mfa_code(self, method_id: str | None = None) -> str:
+        """
+        Ask Pulse to send a verification code for the pending MFA challenge.
+
+        Args:
+            method_id (str, optional): the verification method, such as "EMAIL".
+                Defaults to the first method registered on the account.
+
+        Returns:
+            str: the id of the method the code was sent with
+
+        Raises:
+            PulseNotLoggedInError: if no MFA challenge is pending
+            PulseAuthenticationError: if Pulse refuses the request
+
+        """
+        command = await self._async_mfa_command("requestOtpForRegisteredProperty")
+        options = command.get("params", {}).get("id", {}).get("options", [])
+        ids = [o.get("value") for o in options if o.get("value")]
+        if method_id is None:
+            if not ids:
+                LOG.error("No MFA verification method is registered")
+                raise PulseAuthenticationError()
+            method_id = ids[0]
+        sent = await self._async_mfa_query(command["action"], "POST", {"id": method_id})
+        if sent.get("detail") != "OK":
+            LOG.error("Pulse did not send an MFA verification code: %s", sent)
+            raise PulseAuthenticationError()
+        return method_id
+
+    async def async_submit_mfa_code(
+        self, code: str, device_name: str = "pyadtpulse"
+    ) -> html.HtmlElement:
+        """
+        Finish the pending MFA login with a verification code.
+
+        The device is also added to the account's trusted devices, so later
+        logins with the same fingerprint skip MFA. If Pulse refuses that, the
+        login still succeeds and a warning is logged.
+
+        Args:
+            code (str): the verification code Pulse sent
+            device_name (str): the name to trust this device under
+
+        Returns:
+            html.HtmlElement: the parsed summary page
+
+        Raises:
+            PulseNotLoggedInError: if no MFA challenge is pending, or the login
+                fails after the code was accepted (start over)
+            PulseAuthenticationError: if Pulse rejects the code
+
+        """
+        command = await self._async_mfa_command("validateOtp")
+        validated = await self._async_mfa_query(
+            command["action"], "POST", {"otp": code.strip()}
+        )
+        x_token = validated.get("detail")
+        if not isinstance(x_token, str) or "sig=" not in x_token:
+            LOG.error("Pulse rejected the MFA verification code")
+            raise PulseAuthenticationError()
+        # Pulse offers addTrustedDevice only once the code is validated, and the
+        # web client sends the name URL-encoded inside the form body.
+        trust_href = command["action"].rsplit("/", 1)[0] + "/addTrustedDevice"
+        # Best effort: the code is validated, so the login stands either way;
+        # only the next login needs MFA again. Names must be unique in the
+        # account (HTTP 409 otherwise), so retry once with a suffix.
+        trusted: dict = {}
+        unique = (
+            f"{device_name[: ADT_MAX_DEVICE_NAME_LENGTH - 5]} {secrets.token_hex(2)}"
+        )
+        for name in (device_name[:ADT_MAX_DEVICE_NAME_LENGTH], unique):
+            try:
+                trusted = await self._async_mfa_query(
+                    trust_href, "POST", {"name": quote(name)}, x_token=x_token
+                )
+            except _PulseMFACommandError as ex:
+                if ex.status == HTTPStatus.CONFLICT:
+                    continue
+            except PulseServerConnectionError:
+                pass
+            break
+        if trusted.get("detail") != "OK":
+            LOG.warning("Pulse did not trust this device: %s", trusted)
+        # the code is spent: a retry after a failure below must start over
+        self._mfa_challenge = None
+        response = await self.async_query(
+            ADT_POST_SIGNIN_URI,
+            timeout=ADT_DEFAULT_LOGIN_TIMEOUT,
+            requires_authentication=False,
+        )
+        try:
+            tree = self.check_login_errors(response)
+        except PulseAuthenticationError as ex:
+            # the code was accepted, so this is not a wrong code
+            raise PulseNotLoggedInError() from ex
+        self._login_succeeded()
         return tree
 
     @typechecked
@@ -331,6 +511,7 @@ class PulseConnection(PulseQueryManager):
         This just resets the authenticated flag and clears the ClientSession.
         """
         LOG.debug("Resetting session")
+        self._mfa_challenge = None
         self._connection_status.authenticated_flag.clear()
         await self._connection_properties.clear_session()
 

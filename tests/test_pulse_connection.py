@@ -388,3 +388,26 @@ async def test_waiting_query_uses_version_adopted_by_login(
     status, _, url = await query
     assert status == 200
     assert str(url) == _other_version_url(ADT_SUMMARY_URI)
+
+
+@pytest.mark.asyncio
+async def test_login_error_on_unsupported_api_version(
+    mocked_server_responses, get_mocked_url, read_file
+):
+    """A failed sign-in on a version we would not adopt is still classified."""
+    pc = setup_pulse_connection()
+    signin = f"{DEFAULT_API_HOST}/myhome/25.0.0-1{ADT_LOGIN_URI}?e=ns&partner=adt"
+    add_custom_response(
+        mocked_server_responses,
+        read_file,
+        get_mocked_url(ADT_LOGIN_URI),
+        method="POST",
+        status=307,
+        headers={"Location": signin},
+    )
+    add_custom_response(
+        mocked_server_responses, read_file, signin, file_name="not_signed_in.html"
+    )
+    with pytest.raises(PulseNotLoggedInError):
+        await pc.async_do_login_query()
+    assert not pc.login_in_progress
