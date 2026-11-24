@@ -7,10 +7,14 @@ which handles API version fetching, query retries, and connection error handling
 
 import time
 import asyncio
+import logging
 from typing import Any, cast
-from datetime import datetime, timedelta
+from datetime import timedelta
+from email.utils import formatdate
+from collections.abc import Generator
 
 import pytest
+from yarl import URL
 from aiohttp import client_reqrep, client_exceptions
 from aioresponses import aioresponses
 from freezegun.api import StepTickTimeFactory, FrozenDateTimeFactory
@@ -19,6 +23,7 @@ from tests.conftest import MOCKED_API_VERSION
 from pyadtpulse.const import ADT_ORB_URI, DEFAULT_API_HOST
 from pyadtpulse.exceptions import (
     PulseConnectionError,
+    PulseNotLoggedInError,
     PulseClientConnectionError,
     PulseServerConnectionError,
     PulseServiceTemporarilyUnavailableError,
@@ -30,6 +35,27 @@ from pyadtpulse.pulse_connection_properties import PulseConnectionProperties
 # Constants for backoff testing
 INITIAL_BACKOFF = 2
 BACKOFF_INTERVAL = 2.0
+
+
+@pytest.fixture
+def non_utc_timezone() -> Generator[None]:
+    """
+    Run the test with a local time zone well away from UTC.
+
+    HTTP-dates are always GMT, so code that reads one as local time is only
+    wrong when local time is not UTC, which CI runners usually are.
+    """
+    if not hasattr(time, "tzset"):
+        pytest.skip("time.tzset is not available on this platform")
+    mp = pytest.MonkeyPatch()
+    # POSIX TZ string, so no tz database is needed: UTC-5 all year
+    mp.setenv("TZ", "XST+05")
+    time.tzset()
+    try:
+        yield
+    finally:
+        mp.undo()
+        time.tzset()
 
 
 @pytest.mark.asyncio
@@ -156,6 +182,7 @@ async def test_fetch_version_eventually_succeeds(
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("non_utc_timezone")
 async def test_retry_after(
     mocked_server_responses: aioresponses,
     freeze_time_to_now: FrozenDateTimeFactory | StepTickTimeFactory,
@@ -208,14 +235,11 @@ async def test_retry_after(
     await p.async_query(ADT_ORB_URI, requires_authentication=False)
 
     now = time.time()
-    retry_date = now + float(retry_after_time)
-    retry_date_str = datetime.fromtimestamp(retry_date).strftime(
-        "%a, %d %b %Y %H:%M:%S GMT"
-    )
-    # need to get the new retry after time since it doesn't have fractions of seconds
-    new_retry_after = (
-        datetime.strptime(retry_date_str, "%a, %d %b %Y %H:%M:%S GMT").timestamp() - now
-    )
+    # a real HTTP-date: GMT, whatever the local time zone is
+    retry_date = int(now + float(retry_after_time))
+    retry_date_str = formatdate(retry_date, usegmt=True)
+    # the header has no fractions of seconds
+    new_retry_after = retry_date - now
     mocked_server_responses.get(
         cp.make_url(ADT_ORB_URI),
         status=503,
@@ -223,6 +247,8 @@ async def test_retry_after(
     )
     with pytest.raises(PulseServiceTemporarilyUnavailableError):
         await p.async_query(ADT_ORB_URI, requires_authentication=False)
+    # the date is GMT: reading it as local time would move this by hours
+    assert s.get_backoff().expiration_time == retry_date
 
     frozen_time.tick(timedelta(seconds=new_retry_after - 1))
     with pytest.raises(PulseServiceTemporarilyUnavailableError):
@@ -352,6 +378,8 @@ async def run_query_exception_test(
         (client_exceptions.ServerDisconnectedError, PulseServerConnectionError),
         (client_exceptions.ServerTimeoutError, PulseServerConnectionError),
         (client_exceptions.ServerConnectionError, PulseServerConnectionError),
+        (client_exceptions.ConnectionTimeoutError, PulseServerConnectionError),
+        (client_exceptions.SocketTimeoutError, PulseServerConnectionError),
         (asyncio.TimeoutError, PulseServerConnectionError),
     ),
 )
@@ -390,8 +418,8 @@ async def test_async_query_exceptions(
     (
         (ConnectionRefusedError, PulseServerConnectionError),
         (ConnectionResetError, PulseServerConnectionError),
-        # (asyncio.TimeoutError, PulseClientConnectionError),
-        # (BrokenPipeError, PulseClientConnectionError),
+        (TimeoutError, PulseServerConnectionError),
+        (BrokenPipeError, PulseClientConnectionError),
     ),
 )
 async def test_async_query_connector_errors(
@@ -459,3 +487,212 @@ async def test_async_query_connector_errors(
     #     aiohttp_exception,
     #     test_exception[1],
     # )
+
+
+@pytest.mark.usefixtures("non_utc_timezone")
+def test_retry_after_http_date_is_gmt():
+    """An HTTP-date Retry-After is read as GMT, not local time."""
+    s = PulseConnectionStatus()
+    p = PulseQueryManager(s, PulseConnectionProperties(DEFAULT_API_HOST))
+    retry_at = int(time.time()) + 300
+    with pytest.raises(PulseServiceTemporarilyUnavailableError) as exc_info:
+        p._handle_http_errors((503, None, None, formatdate(retry_at, usegmt=True)))
+    assert exc_info.value.retry_time == retry_at
+    # an unparseable date means no retry time, not a crash
+    with pytest.raises(PulseServiceTemporarilyUnavailableError) as exc_info:
+        p._handle_http_errors((503, None, None, "not a date"))
+    assert exc_info.value.retry_time is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", (500, 502, 504))
+async def test_recoverable_errors_are_retried(
+    mocked_server_responses: aioresponses,
+    mock_sleep: Any,
+    get_mocked_connection_properties: PulseConnectionProperties,
+    status: int,
+):
+    """A 500/502/504 is retried with the query backoff and can then succeed."""
+    s = PulseConnectionStatus()
+    cp = get_mocked_connection_properties
+    p = PulseQueryManager(s, cp)
+    url = cp.make_url(ADT_ORB_URI)
+    for _ in range(MAX_REQUERY_RETRIES - 1):
+        mocked_server_responses.get(url, status=status)
+    mocked_server_responses.get(url, status=200, body="ok")
+
+    code, text, _ = await p.async_query(ADT_ORB_URI, requires_authentication=False)
+
+    assert code == 200
+    assert text == "ok"
+    assert len(mocked_server_responses.requests[("GET", URL(url))]) == (
+        MAX_REQUERY_RETRIES
+    )
+    # query backoff between attempts, doubling
+    assert [c.args[0] for c in mock_sleep.call_args_list] == [
+        1 * 2**i for i in range(MAX_REQUERY_RETRIES - 1)
+    ]
+    assert s.get_backoff().backoff_count == 0
+
+
+@pytest.mark.asyncio
+async def test_recoverable_errors_raise_when_retries_run_out(
+    mocked_server_responses: aioresponses,
+    mock_sleep: Any,
+    get_mocked_connection_properties: PulseConnectionProperties,
+):
+    """Once the retries run out, a 500 raises and does not reset the backoff."""
+    s = PulseConnectionStatus()
+    cp = get_mocked_connection_properties
+    p = PulseQueryManager(s, cp)
+    url = cp.make_url(ADT_ORB_URI)
+    for _ in range(MAX_REQUERY_RETRIES):
+        mocked_server_responses.get(url, status=500)
+    mocked_server_responses.get(url, status=200)
+
+    with pytest.raises(PulseServerConnectionError):
+        await p.async_query(ADT_ORB_URI, requires_authentication=False)
+
+    assert len(mocked_server_responses.requests[("GET", URL(url))]) == (
+        MAX_REQUERY_RETRIES
+    )
+    assert s.get_backoff().backoff_count == 1
+
+
+@pytest.mark.asyncio
+async def test_auth_wait_timeout_raises_not_logged_in(
+    mocker: Any,
+    mocked_server_responses: aioresponses,
+    get_mocked_connection_properties: PulseConnectionProperties,
+):
+    """
+    Timing out waiting for login raises PulseNotLoggedInError.
+
+    asyncio.wait_for raises asyncio.TimeoutError, which is not TimeoutError
+    before Python 3.11.
+    """
+
+    async def timed_out(coro, _timeout):
+        coro.close()
+        raise asyncio.TimeoutError
+
+    mocker.patch("pyadtpulse.pulse_query_manager.wait_for", side_effect=timed_out)
+    s = PulseConnectionStatus()
+    cp = get_mocked_connection_properties
+    p = PulseQueryManager(s, cp)
+
+    with pytest.raises(PulseNotLoggedInError):
+        await p.async_query(ADT_ORB_URI)
+    assert not mocked_server_responses.requests
+
+
+@pytest.mark.asyncio
+async def test_fetch_version_asyncio_timeout():
+    """An asyncio.TimeoutError fetching the version maps to a Pulse error."""
+    s = PulseConnectionStatus()
+    cp = PulseConnectionProperties(DEFAULT_API_HOST)
+    p = PulseQueryManager(s, cp)
+    with aioresponses() as m:
+        m.get(DEFAULT_API_HOST, exception=asyncio.TimeoutError())
+        with pytest.raises(PulseServerConnectionError):
+            await p.async_fetch_version()
+    assert s.get_backoff().backoff_count == 1
+
+
+@pytest.mark.asyncio
+async def test_detailed_logging_redacts_credentials(
+    mocked_server_responses: aioresponses,
+    get_mocked_connection_properties: PulseConnectionProperties,
+    caplog: pytest.LogCaptureFixture,
+):
+    """Detailed debug logging never writes login credentials."""
+    s = PulseConnectionStatus()
+    cp = get_mocked_connection_properties
+    cp.detailed_debug_logging = True
+    p = PulseQueryManager(s, cp)
+    uri = "/access/signin.jsp"
+    mocked_server_responses.post(cp.make_url(uri), status=200)
+    params = {
+        "usernameForm": "user-secret@example.com",
+        "passwordForm": "password-secret",
+        "fingerprint": "fingerprint-secret",
+        "networkid": "visible-value",
+    }
+    with caplog.at_level(logging.DEBUG, logger="pyadtpulse.pulse_query_manager"):
+        await p.async_query(
+            uri, method="POST", extra_params=params, requires_authentication=False
+        )
+    assert "visible-value" in caplog.text
+    for secret in ("user-secret", "password-secret", "fingerprint-secret"):
+        assert secret not in caplog.text
+    # the request itself still carries the real values
+    assert params["passwordForm"] == "password-secret"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("extra_headers", (None, {"Sec-Fetch-Mode": "cors"}))
+async def test_background_accept_header_is_sent(
+    mocked_server_responses: aioresponses,
+    get_mocked_connection_properties: PulseConnectionProperties,
+    extra_headers: dict[str, str] | None,
+):
+    """Background URIs send Accept: */* and leave the caller's headers alone."""
+    s = PulseConnectionStatus()
+    cp = get_mocked_connection_properties
+    p = PulseQueryManager(s, cp)
+    url = cp.make_url(ADT_ORB_URI)
+    mocked_server_responses.get(url, status=200)
+    original = dict(extra_headers) if extra_headers is not None else None
+
+    await p.async_query(
+        ADT_ORB_URI, extra_headers=extra_headers, requires_authentication=False
+    )
+
+    sent = mocked_server_responses.requests[("GET", URL(url))][0].kwargs["headers"]
+    assert sent["Accept"] == "*/*"
+    if extra_headers is not None:
+        assert sent["Sec-Fetch-Mode"] == "cors"
+    assert extra_headers == original
+
+
+@pytest.mark.asyncio
+async def test_undecodable_response_raises_pulse_error(
+    mocked_server_responses: aioresponses,
+    get_mocked_connection_properties: PulseConnectionProperties,
+):
+    """A body that is not valid in its charset raises a Pulse exception."""
+    s = PulseConnectionStatus()
+    cp = get_mocked_connection_properties
+    p = PulseQueryManager(s, cp)
+    mocked_server_responses.get(
+        cp.make_url(ADT_ORB_URI),
+        status=200,
+        body=b"\xff\xfe\xfa not utf-8",
+        content_type="text/html; charset=utf-8",
+    )
+    with pytest.raises(PulseServerConnectionError):
+        await p.async_query(ADT_ORB_URI, requires_authentication=False)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("timeout", "expected"), ((None, 10.0), (30, 30.0), (2.5, 2.5))
+)
+async def test_query_timeout(
+    mocked_server_responses: aioresponses,
+    get_mocked_connection_properties: PulseConnectionProperties,
+    timeout: float | None,
+    expected: float,
+):
+    """The default timeout allows for slow links, and floats are accepted."""
+    s = PulseConnectionStatus()
+    cp = get_mocked_connection_properties
+    p = PulseQueryManager(s, cp)
+    url = cp.make_url(ADT_ORB_URI)
+    mocked_server_responses.get(url, status=200)
+    kwargs = {} if timeout is None else {"timeout": timeout}
+
+    await p.async_query(ADT_ORB_URI, requires_authentication=False, **kwargs)
+
+    sent = mocked_server_responses.requests[("GET", URL(url))][0].kwargs["timeout"]
+    assert sent.total == expected
