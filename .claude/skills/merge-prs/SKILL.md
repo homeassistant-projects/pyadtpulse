@@ -16,7 +16,12 @@ never `--admin`.
    polling loop: a hand-rolled loop that exits on the wrong condition is how a
    PR once got merged with checks still pending. In the first few seconds
    after a push GitHub has no checks for the PR yet. `--watch` then exits 1
-   with "no checks reported", so wait a few seconds and run it again. If any check is `fail`, stop
+   with "no checks reported", so wait a few seconds and run it again. It also
+   watches only the checks that exist when it starts, and the two workflows
+   register theirs separately, so it can exit 0 before the tests have even
+   started. Exit 0 isn't enough: `gh pr checks <n>` must then list all 8
+   checks as `pass` (`commit-messages`, `deptry`, `ruff`, and `pytest` on
+   Python 3.10 through 3.14). If fewer are listed, watch again. If any check is `fail`, stop
    and report it. A PR with no checks at all is either a first-time
    contributor's (the maintainer must approve its workflow runs on GitHub) or
    one whose base was just changed (see **Base branch**).
