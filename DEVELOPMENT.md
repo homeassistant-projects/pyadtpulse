@@ -10,7 +10,7 @@ Before you start, ensure you have installed:
 
 - Python 3.10 or newer (the version in `.python-version` is what uv installs by default)
 - Git
-- [`uv`](https://github.com/astral-sh/uv) 0.8 or newer
+- [`uv`](https://github.com/astral-sh/uv) 0.9.17 or newer
 - A code editor (e.g., VSCode)
 
 ---
@@ -35,8 +35,14 @@ uv run pre-commit install
 ```
 
 `uv sync` creates the `.venv` virtual environment (or updates it) and installs the package
-with the `dev` and `testing` dependency groups. `uv.lock` is not committed, so it resolves
-the newest versions `pyproject.toml` allows and writes a local `uv.lock`.
+with the `dev` and `testing` dependency groups. `uv.lock` is not committed, so `uv sync`
+resolves dependencies from `pyproject.toml` and writes a local `uv.lock`. Releases newer than
+2 days are skipped (`exclude-newer = "2 days"` in `[tool.uv]`). To try a brand-new release of
+one package anyway:
+
+```bash
+uv lock --exclude-newer-package "NAME=0 days"
+```
 
 `pre-commit install` makes `.git/hooks/pre-commit` run the hooks from your `.venv`: ruff
 lint and format, YAML/TOML/JSON checks, and a check that blocks commits straight to
@@ -67,8 +73,9 @@ Run the tests the way CI does:
 uv run --no-dev --frozen pytest --isolate
 ```
 
-`--isolate` (from pytest-isolate) runs each test in its own process. HTTP responses are mocked with `aioresponses` and the HTML files in
-`tests/data_files/`, so the tests never contact ADT.
+`--isolate` (from pytest-isolate) runs each test in its own process, as CI does; plain
+`uv run pytest tests` also works. HTTP responses are mocked with `aioresponses` and the HTML
+files in `tests/data_files/`, so the tests never contact ADT.
 
 Lint and format:
 
@@ -77,7 +84,14 @@ uv run ruff check
 uv run ruff format --check
 ```
 
-Ruff also formats the Python code blocks in Markdown files such as `README.md`. To run every
+Ruff also formats the Python code blocks in Markdown files such as `README.md`.
+
+Ruff is pinned to one exact version in two places: the `dev` group in `pyproject.toml` and
+the `ruff-pre-commit` `rev` in `.pre-commit-config.yaml` (CI installs the `pyproject.toml`
+one). Bump both together. Dependabot opens separate pip and pre-commit PRs for each ruff
+release.
+
+To run every
 pre-commit hook on all files:
 
 ```bash
