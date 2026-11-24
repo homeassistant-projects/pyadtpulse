@@ -1,84 +1,72 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+pyadtpulse is an async Python client for ADT Pulse alarm systems. It works by
+scraping the Pulse web portal (`portal.adtpulse.com`) with aiohttp and lxml; ADT
+has no public API. Its main consumer is the Home Assistant integration
+[hass-adtpulse](https://github.com/EVWorth/hass-adtpulse), so a behavior change
+here ships to Home Assistant users once that integration bumps its requirement.
 
-## Project Overview
+## Commands
 
-pyadtpulse is a Python async library that provides an interface to ADT Pulse security systems. It supports both synchronous and asynchronous operations, with the async version (`PyADTPulseAsync`) being the preferred implementation.
+The project uses uv. `uv.lock` is gitignored, so `uv sync` resolves the newest
+versions allowed by `pyproject.toml`.
 
-## Core Architecture
+```bash
+uv sync                                         # create .venv with all groups
+uv run --no-dev --frozen pytest --isolate       # the test suite exactly as CI runs it
+uv run pytest tests/test_pulse_mfa.py           # one file (plain pytest also passes locally)
+uv run ruff check                               # lint (CI: validate.yaml)
+uv run ruff format --check                      # format check (CI: validate.yaml)
+uv run pre-commit install                       # once per clone
+```
 
-### Main Components
+There is no mypy and no coverage tooling. Runtime type checks come from
+typeguard's `@typechecked`, which the code uses widely.
 
-- **PyADTPulse/PyADTPulseAsync**: Main client classes in `pyadtpulse_async.py` and `__init__.py`
-- **PulseConnection**: HTTP session management and connection handling in `pulse_connection.py`
-- **ADTPulseSite**: Represents individual ADT sites/locations in `site.py`
-- **ADTZone**: Individual security zones (doors, windows, motion sensors) in `zones.py`
-- **Authentication**: Login handling and session management in `pulse_authentication_properties.py`
+CI (`.github/workflows/`) runs the tests on Python 3.10 to 3.14, plus ruff
+(`validate.yaml`) and Bandit. Code must keep working on 3.10: for example, catch
+`asyncio.TimeoutError` as well as `TimeoutError`.
 
-### Key Design Patterns
+## Layout
 
-- **Async-first architecture**: All core operations are async with sync wrappers
-- **Connection pooling**: Reuses HTTP sessions and manages authentication state
-- **Background tasks**: Automatic keepalive, relogin, and sync checking
-- **Thread safety**: Uses locks for sync/async coordination
+- `pyadtpulse/pyadtpulse_async.py`: `PyADTPulseAsync`, the public client. The
+  sync `PyADTPulse` in `__init__.py` is deprecated; don't add features to it.
+- `pyadtpulse/pulse_connection.py`: login, logout, and the MFA verification-code
+  flow (helpers in `pulse_mfa.py`).
+- `pyadtpulse/pulse_query_manager.py`: every HTTP request goes through
+  `async_query`, which handles retries, backoff and Retry-After.
+- `pyadtpulse/site.py`, `zones.py`, `alarm_panel.py`, `gateway.py`: parsed
+  portal state.
+- `tests/data_files/`: saved portal HTML pages used as fixtures. `conftest.py`
+  mocks the portal with aioresponses and with `PulseMockedWebServer`.
 
-## Development Commands
+## Things that bite
 
-### Code Quality
-- **Linting**: `ruff check` and `ruff format` (configured in pyproject.toml)
-- **Type checking**: `mypy` (configured in pyproject.toml)
-- **Pre-commit hooks**: `pre-commit run --all-files` (see .pre-commit-config.yaml)
+- **Nobody can test against a live ADT account in CI**, and the maintainer
+  doesn't have one. Prove portal-facing changes with saved HTML in
+  `tests/data_files/` and with tests that fail without the fix. Say in the PR
+  what was run against a real account, if anything.
+- **ADT runs more than one portal version at once** (URLs look like
+  `/myhome/31.0.0-39/...`) and can redirect a request into another version.
+  Compare URLs with `PulseConnectionProperties.split_versioned_url`, never the
+  full URL, and build request URLs with `make_url()` at request time.
+- **The portal session cookie is `JSESSIONID`.** `PulseCookieJar` drops stale
+  copies on longer paths; read its docstring before touching cookies.
+- **Only one session per account works.** A second client logging in with the
+  same credentials logs the first one out.
+- **Test-only dependency caps** live in the `testing` group in `pyproject.toml`
+  (for example `aiohttp<3.14`, because aioresponses can't mock 3.14 yet). They
+  don't apply to users. Each one has a comment saying when to remove it.
+- **Ruff isn't pinned** in CI, which installs the newest release. Ruff 0.17 also
+  formats Python code blocks in Markdown, so `README.md` can fail the format
+  check.
+- **Imports are sorted by length** (`length-sort = true` in the isort config).
+  Run `uv run ruff check --fix` rather than ordering them by hand.
 
-### Testing
-- **Run all tests**: `python -m pytest`
-- **Run specific test**: `python -m pytest tests/test_filename.py`
-- **Run with coverage**: `python -m pytest --cov=pyadtpulse --cov-report=html`
-- **Test timeout**: 30 seconds (configured in pyproject.toml)
+## Workflow
 
-### Package Management
-- Uses Poetry for dependency management
-- **Install dependencies**: `poetry install`
-- **Add dependency**: `poetry add package_name`
-- **Update dependencies**: `poetry update`
-
-## Important Implementation Notes
-
-### Authentication & Sessions
-- ADT Pulse requires browser fingerprinting for 2FA bypass
-- Sessions are automatically managed with keepalive and relogin intervals
-- Multiple concurrent sessions with same credentials will cause logouts
-
-### Async/Sync Coordination
-- `PyADTPulse` (sync) is deprecated - use `PyADTPulseAsync` for new code
-- Background thread management in sync version handles async operations
-- All API calls go through async methods internally
-
-### Error Handling
-- Custom exceptions in `exceptions.py` for different failure modes
-- Backoff/retry logic in `pulse_backoff.py`
-- Connection status tracking in `pulse_connection_status.py`
-
-### Testing Strategy
-- Test data files in `tests/data_files/` contain HTML responses
-- Mock HTTP responses using `aioresponses`
-- Async test fixtures in `conftest.py`
-
-## Common Patterns
-
-### Adding New Features
-1. Implement async version first in appropriate module
-2. Add tests with mock data files
-3. Update sync wrapper if needed
-4. Follow existing error handling patterns
-
-### API Endpoints
-- All ADT Pulse endpoints are accessed through `PulseConnection`
-- Base URL configurable via `service_host` parameter
-- Response parsing typically uses lxml for HTML parsing
-
-### Background Tasks
-- Sync check task monitors for data updates
-- Keepalive prevents session timeout
-- Relogin handles authentication refresh
-- All managed through asyncio task scheduling
+- Pre-commit blocks commits to `master` (`no-commit-to-branch`), so work on a
+  branch and open a PR against `master`.
+- Docstrings follow the Google convention (ruff `D` rules).
+- Releases: bump `version` in `pyproject.toml` in a PR, then push a tag named
+  exactly `X.Y.Z` (no `v`), which runs `pypi-publish.yml`.
