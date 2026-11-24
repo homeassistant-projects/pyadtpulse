@@ -73,6 +73,7 @@ Lint and format:
 ```bash
 uv run ruff check
 uv run ruff format --check
+uv run deptry .   # imports vs. declared dependencies
 ```
 
 Ruff also formats the Python code blocks in Markdown files such as `README.md`.

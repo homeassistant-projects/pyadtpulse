@@ -29,12 +29,15 @@ dependencies = [
     "aiohttp-fast-zlib[zlib-ng]>=0.3.0",
     "lxml>=6.0.0",
     "typeguard>=4.4.4",
+    # imported directly (URL handling); same floor aiohttp>=3.12.14 requires
+    "yarl>=1.17.0",
 ]
 
 
 [dependency-groups]
 bandit = ["bandit[sarif,toml]>=1.8.6"]
 dev = [
+    "deptry>=0.25.1",
     "pre-commit>=4.2.0",
     # Exact pin: ruff-action in the Validate workflow installs this version.
     # Keep it in sync with the ruff-pre-commit rev in .pre-commit-config.yaml.
