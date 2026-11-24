@@ -40,7 +40,11 @@ from pyadtpulse.exceptions import (
 )
 from pyadtpulse.pulse_backoff import PulseBackoff
 from pyadtpulse.pulse_connection import PulseConnection
-from pyadtpulse.pyadtpulse_async import KEEPALIVE_TASK_NAME, PyADTPulseAsync
+from pyadtpulse.pyadtpulse_async import (
+    KEEPALIVE_TASK_NAME,
+    PulseUpdate,
+    PyADTPulseAsync,
+)
 from pyadtpulse.pulse_authentication_properties import PulseAuthenticationProperties
 
 DEFAULT_SYNC_CHECK = "234532-456432-0"
@@ -463,7 +467,7 @@ async def test_infinite_sync_check(
     assert not task.done()
     assert p._sync_task is not None
     assert not p._sync_task.done()
-    assert p.sync_check_exception is None
+    assert p._update_exception is None
     shutdown_event.set()
     task.cancel()
     await task
@@ -775,7 +779,7 @@ async def test_sync_check_relogin(
     assert count_requests(responses, "POST", ADT_LOGIN_URI) == logins + 2
     assert p._authentication_properties.last_login_time >= login_time
     assert p._pulse_connection_status.authenticated_flag.is_set()
-    assert p.sync_check_exception is None
+    assert p._update_exception is None
     await p.async_logout()
 
 
@@ -847,7 +851,7 @@ async def test_keepalive_skips_while_backing_off(
     await run_keepalive(p, mocker, 2)
     keepalive_mocks["query"].assert_not_awaited()
     keepalive_mocks["login_looped"].assert_not_awaited()
-    assert p.sync_check_exception is None
+    assert p._update_exception is None
 
 
 @pytest.mark.asyncio
@@ -881,7 +885,7 @@ async def test_keepalive_resets_timeout_and_updates_gateway(
     assert keepalive_mocks["query"].await_args.args == (ADT_TIMEOUT_URI, "POST")
     keepalive_mocks["set_device"].assert_awaited_with(ADT_GATEWAY_STRING)
     keepalive_mocks["login_looped"].assert_not_awaited()
-    assert p.sync_check_exception is None
+    assert p._update_exception is None
 
 
 @pytest.mark.asyncio
@@ -912,7 +916,7 @@ async def test_keepalive_reset_timeout_errors(
     await run_keepalive(p, mocker, 2)
     assert keepalive_mocks["query"].await_count == 2
     keepalive_mocks["set_device"].assert_not_awaited()
-    assert p.sync_check_exception is None
+    assert p._update_exception is None
 
 
 @pytest.mark.asyncio
@@ -969,7 +973,7 @@ async def test_keepalive_reports_relogin_failure(
     p._authentication_properties.last_login_time = 0
     keepalive_mocks["login_looped"].side_effect = error()
     await run_keepalive(p, mocker, 5)
-    assert isinstance(p.sync_check_exception, error)
+    assert isinstance(p._update_exception, error)
     assert p._pulse_properties.updates_exist.is_set()
     with pytest.raises(error):
         await p.wait_for_update()
@@ -1069,7 +1073,7 @@ async def test_wait_for_update_consumes_pending_exception(
     )
     with pytest.raises(PulseServerConnectionError):
         await p.wait_for_update()
-    assert p.sync_check_exception is None
+    assert p._update_exception is None
     with pytest.raises((asyncio.TimeoutError, TimeoutError)):
         await asyncio.wait_for(p.wait_for_update(), 0.2)
     await p.async_logout()
@@ -1141,7 +1145,7 @@ async def test_login_looped_retries(
     # PulseNotLoggedInError bumps the login backoff, which the next login waits on
     assert p._pulse_connection.login_backoff.backoff_count == login_backoff + 1
     # the transient errors are reported to wait_for_update
-    assert p.sync_check_exception is not None
+    assert p._update_exception is not None
 
 
 @pytest.mark.asyncio
@@ -1227,3 +1231,31 @@ async def test_login_gateway_offline(
         file_name=LoginType.SUCCESS.value,
     )
     await p.async_logout()
+
+
+@pytest.mark.asyncio
+async def test_wait_for_update_returns_pulse_update(
+    adt_pulse_instance: tuple[PyADTPulseAsync, Any],
+):
+    """wait_for_update returns a PulseUpdate that also unpacks like a tuple."""
+    p, _ = adt_pulse_instance
+    # stand in for the sync check task: report zone 1 changed, then idle
+    idle = asyncio.Event()
+
+    async def fake_sync_check() -> None:
+        p._updated_zones = {1}
+        p._pulse_properties.updates_exist.set()
+        await idle.wait()
+
+    p._sync_task = asyncio.create_task(fake_sync_check())
+    try:
+        update = await asyncio.wait_for(p.wait_for_update(), 5)
+    finally:
+        idle.set()
+        await p._sync_task
+        p._sync_task = None
+    assert isinstance(update, PulseUpdate)
+    assert update.alarm_changed is False
+    assert update.updated_zones == {1}
+    alarm_changed, zones = update
+    assert (alarm_changed, zones) == (False, {1})

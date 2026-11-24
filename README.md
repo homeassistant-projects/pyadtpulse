@@ -230,12 +230,19 @@ pyadtpulse 2.0 removes code that was deprecated or never worked:
   updates.
 - `ADTPulseZones.update_status()`, `update_state()` and
   `update_last_activity_timestamp()`. Use `update_device_info()`.
+- `PyADTPulseAsync.sites`, which was deprecated and only ever held one site. Use
+  `PyADTPulseAsync.site`.
+- `PyADTPulseAsync.sync_check_exception`, which was documented as internal.
+- The event-loop helpers left from the sync client: `check_sync()`, `check_async()`
+  and `loop` on `PulseConnectionProperties`, and `PulseConnection.check_sync()`.
 - The unused constants `ADT_ZONES_URI`, `ADT_STATES_URI`, `ADT_ARM_URI`, `STATE_OPEN`,
   `STATE_MOTION`, `STATE_TAMPER`, `STATE_ALARM`, `STATE_UNKNOWN` and `ADT_SENSOR_*`.
 
 Other changes:
 
 - `ADTPulseFlattendZone` is renamed `ADTPulseFlattenedZone`.
+- `wait_for_update()` returns a `PulseUpdate` named tuple with `alarm_changed` and
+  `updated_zones` fields. It still unpacks and indexes like the old tuple.
 - `ADTPulseSite.zones` and `zones_as_dict` return an empty list or `ADTPulseZones`
   when the site has no zones, instead of raising `RuntimeError`.
 
