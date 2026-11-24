@@ -57,6 +57,18 @@ working on 3.10: for example, catch `asyncio.TimeoutError` as well as
   full URL, and build request URLs with `make_url()` at request time.
 - **The portal session cookie is `JSESSIONID`.** `PulseCookieJar` drops stale
   copies on longer paths; read its docstring before touching cookies.
+- **hass-adtpulse has no upper bound on pyadtpulse**, so every new Home
+  Assistant install picks up a new major release the day it's published.
+  Before removing or renaming a public name, even in a breaking release,
+  check whether the integration uses it:
+
+  ```bash
+  d=$(mktemp -d) && git clone -q --depth 1 https://github.com/EVWorth/hass-adtpulse "$d"
+  grep -rnw NAME "$d/custom_components"
+  ```
+
+  If it does, keep the name behind a `DeprecationWarning` until the
+  integration stops using it.
 - **Only one session per account works.** A second client logging in with the
   same credentials logs the first one out.
 - **Test-only dependency caps** live in the `testing` group in `pyproject.toml`
