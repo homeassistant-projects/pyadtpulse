@@ -4,8 +4,6 @@ from re import match
 
 from typeguard import typechecked
 
-from .util import set_debug_lock
-
 
 class PulseAuthenticationProperties:
     """Pulse Authentication Properties."""
@@ -13,7 +11,6 @@ class PulseAuthenticationProperties:
     __slots__ = (
         "_fingerprint",
         "_last_login_time",
-        "_paa_attribute_lock",
         "_password",
         "_site_id",
         "_username",
@@ -60,7 +57,6 @@ class PulseAuthenticationProperties:
         username: str,
         password: str,
         fingerprint: str,
-        debug_locks: bool = False,
     ) -> None:
         """Initialize Pulse Authentication Properties."""
         self.check_username(username)
@@ -69,71 +65,58 @@ class PulseAuthenticationProperties:
         self._username = username
         self._password = password
         self._fingerprint = fingerprint
-        self._paa_attribute_lock = set_debug_lock(
-            debug_locks, "pyadtpulse.paa_attribute_lock"
-        )
         self._last_login_time = 0
         self._site_id = ""
 
     @property
     def last_login_time(self) -> int:
         """Get the last login time."""
-        with self._paa_attribute_lock:
-            return self._last_login_time
+        return self._last_login_time
 
     @last_login_time.setter
     @typechecked
     def last_login_time(self, login_time: int) -> None:
-        with self._paa_attribute_lock:
-            self._last_login_time = login_time
+        self._last_login_time = login_time
 
     @property
     def username(self) -> str:
         """Get the username."""
-        with self._paa_attribute_lock:
-            return self._username
+        return self._username
 
     @username.setter
     @typechecked
     def username(self, username: str) -> None:
         self.check_username(username)
-        with self._paa_attribute_lock:
-            self._username = username
+        self._username = username
 
     @property
     def password(self) -> str:
         """Get the password."""
-        with self._paa_attribute_lock:
-            return self._password
+        return self._password
 
     @password.setter
     @typechecked
     def password(self, password: str) -> None:
         self.check_password(password)
-        with self._paa_attribute_lock:
-            self._password = password
+        self._password = password
 
     @property
     def fingerprint(self) -> str:
         """Get the fingerprint."""
-        with self._paa_attribute_lock:
-            return self._fingerprint
+        return self._fingerprint
 
     @fingerprint.setter
     @typechecked
     def fingerprint(self, fingerprint: str) -> None:
         self.check_fingerprint(fingerprint)
-        with self._paa_attribute_lock:
-            self._fingerprint = fingerprint
+        self._fingerprint = fingerprint
 
     @property
     def site_id(self) -> str:
         """Get the site ID."""
-        with self._paa_attribute_lock:
-            return self._site_id
+        return self._site_id
 
     @site_id.setter
     @typechecked
     def site_id(self, site_id: str) -> None:
-        with self._paa_attribute_lock:
-            self._site_id = site_id
+        self._site_id = site_id

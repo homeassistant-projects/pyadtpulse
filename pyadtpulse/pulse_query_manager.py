@@ -73,7 +73,6 @@ class PulseQueryManager:
     __slots__ = (
         "_connection_properties",
         "_connection_status",
-        "_debug_locks",
     )
 
     @staticmethod
@@ -88,12 +87,10 @@ class PulseQueryManager:
         self,
         connection_status: PulseConnectionStatus,
         connection_properties: PulseConnectionProperties,
-        debug_locks: bool = False,
     ) -> None:
         """Initialize Pulse Query Manager."""
         self._connection_status = connection_status
         self._connection_properties = connection_properties
-        self._debug_locks = debug_locks
 
     @staticmethod
     @typechecked
@@ -287,7 +284,6 @@ class PulseQueryManager:
             f"Query:{method} {uri}",
             self._connection_status.get_backoff().initial_backoff_interval,
             threshold=0,
-            debug_locks=self._debug_locks,
             detailed_debug_logging=self._connection_properties.detailed_debug_logging,
         )
         max_retries = (

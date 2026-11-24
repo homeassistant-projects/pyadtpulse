@@ -40,7 +40,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
 
         """
         self._pulse_connection = pulse_connection
-        super().__init__(site_id, name, pulse_connection.debug_locks)
+        super().__init__(site_id, name)
         self._trouble_zones: set[int] | None = None
         self._tripped_zones: set[int] = set()
 
@@ -238,42 +238,37 @@ class ADTPulseSite(ADTPulseSiteProperties):
             )
             if tree is None:
                 return False
-        with self._site_lock:
-            for row in tree.findall(
-                path=".//tr[@class='p_listRow'][@onclick]",
-                namespaces=None,
+        for row in tree.findall(
+            path=".//tr[@class='p_listRow'][@onclick]",
+            namespaces=None,
+        ):
+            tmp_device_name = row.find(".//a")
+            if tmp_device_name is None:
+                LOG.debug("Skipping device as it has no name")
+                continue
+            device_name = tmp_device_name.text_content().strip()
+            row_tds = row.findall("td")
+            zone_id = add_zone_from_row(row_tds)
+            if zone_id is None:
+                continue
+            on_click_value_text = row.get("onclick")
+            if on_click_value_text is None:
+                LOG.debug("Skipping device %s as it has no onclick value", device_name)
+                continue
+            if (
+                on_click_value_text in ("goToUrl('gateway.jsp');", "Gateway")
+                or device_name == "Gateway"
             ):
-                tmp_device_name = row.find(".//a")
-                if tmp_device_name is None:
-                    LOG.debug("Skipping device as it has no name")
-                    continue
-                device_name = tmp_device_name.text_content().strip()
-                row_tds = row.findall("td")
-                zone_id = add_zone_from_row(row_tds)
-                if zone_id is None:
-                    continue
-                on_click_value_text = row.get("onclick")
-                if on_click_value_text is None:
-                    LOG.debug(
-                        "Skipping device %s as it has no onclick value", device_name
-                    )
-                    continue
-                if (
-                    on_click_value_text in ("goToUrl('gateway.jsp');", "Gateway")
-                    or device_name == "Gateway"
-                ):
-                    task_list.append(
-                        create_task(self.async_set_device(ADT_GATEWAY_STRING))
-                    )
-                elif (
-                    result := check_panel_or_gateway(
-                        regex_device,
-                        device_name,
-                        zone_id,
-                        on_click_value_text,
-                    )
-                ) is not None:
-                    task_list.append(result)
+                task_list.append(create_task(self.async_set_device(ADT_GATEWAY_STRING)))
+            elif (
+                result := check_panel_or_gateway(
+                    regex_device,
+                    device_name,
+                    zone_id,
+                    on_click_value_text,
+                )
+            ) is not None:
+                task_list.append(result)
 
         await gather(*task_list)
         self._last_updated = int(time())
@@ -408,67 +403,66 @@ class ADTPulseSite(ADTPulseSiteProperties):
         if self._pulse_connection.detailed_debug_logging:
             start_time = time()
         # parse ADT's convulated html to get sensor status
-        with self._site_lock:
-            try:
-                orb_status = tree.find(
-                    path=".//canvas[@id='ic_orb']",
-                    namespaces=None,
-                ).get("orb")
-                if orb_status == "offline":
-                    self.gateway.is_online = False
-                    raise PulseGatewayOfflineError(self.gateway.backoff)
-                else:
-                    self.gateway.is_online = True
-                    self.gateway.backoff.reset_backoff()
-
-            except (AttributeError, ValueError):
-                LOG.error("Failed to retrieve alarm status from orb!")
-            first_pass = False
-            if self._trouble_zones is None:
-                first_pass = True
-                self._trouble_zones = set()
-            original_non_default_zones = self._trouble_zones | self._tripped_zones
-            # v26 and lower: temp = row.find("span", {"class": "p_grayNormalText"})
-            for row in tree.findall(
-                path=".//tr[@class='p_listRow']",
+        try:
+            orb_status = tree.find(
+                path=".//canvas[@id='ic_orb']",
                 namespaces=None,
-            ):
-                zone_id = get_zone_id(row)
-                if not zone_id:
-                    continue
-                status = get_zone_status(row, zone_id)
-                state = get_zone_state(row, zone_id)
-                last_update = get_zone_last_update(row, zone_id)
-                # we know that orb sorts with trouble first, tripped next, then ok
-                if status != "Online":
-                    self._trouble_zones.add(zone_id)
-                    self._tripped_zones.discard(zone_id)
-                    update_zone_from_row(zone_id, state, status, last_update)
-                    continue
-                # this should be trouble or OK sensors
-                if state != "OK":
-                    self._tripped_zones.add(zone_id)
-                    if zone_id in self._trouble_zones:
-                        self._trouble_zones.remove(zone_id)
-                    update_zone_from_row(zone_id, state, status, last_update)
-                    continue
-                # everything here is OK, so we just need to check if
-                #   anything in tripped or trouble states have
-                # returned to normal
-                if first_pass:
-                    update_zone_from_row(zone_id, state, status, last_update)
-                    continue
+            ).get("orb")
+            if orb_status == "offline":
+                self.gateway.is_online = False
+                raise PulseGatewayOfflineError(self.gateway.backoff)
+            else:
+                self.gateway.is_online = True
+                self.gateway.backoff.reset_backoff()
+
+        except (AttributeError, ValueError):
+            LOG.error("Failed to retrieve alarm status from orb!")
+        first_pass = False
+        if self._trouble_zones is None:
+            first_pass = True
+            self._trouble_zones = set()
+        original_non_default_zones = self._trouble_zones | self._tripped_zones
+        # v26 and lower: temp = row.find("span", {"class": "p_grayNormalText"})
+        for row in tree.findall(
+            path=".//tr[@class='p_listRow']",
+            namespaces=None,
+        ):
+            zone_id = get_zone_id(row)
+            if not zone_id:
+                continue
+            status = get_zone_status(row, zone_id)
+            state = get_zone_state(row, zone_id)
+            last_update = get_zone_last_update(row, zone_id)
+            # we know that orb sorts with trouble first, tripped next, then ok
+            if status != "Online":
+                self._trouble_zones.add(zone_id)
+                self._tripped_zones.discard(zone_id)
+                update_zone_from_row(zone_id, state, status, last_update)
+                continue
+            # this should be trouble or OK sensors
+            if state != "OK":
+                self._tripped_zones.add(zone_id)
+                if zone_id in self._trouble_zones:
+                    self._trouble_zones.remove(zone_id)
+                update_zone_from_row(zone_id, state, status, last_update)
+                continue
+            # everything here is OK, so we just need to check if
+            #   anything in tripped or trouble states have
+            # returned to normal
+            if first_pass:
+                update_zone_from_row(zone_id, state, status, last_update)
+                continue
+            if not original_non_default_zones:
+                break
+            if zone_id in original_non_default_zones:
+                update_zone_from_row(zone_id, state, status, last_update)
+                original_non_default_zones.remove(zone_id)
                 if not original_non_default_zones:
                     break
-                if zone_id in original_non_default_zones:
-                    update_zone_from_row(zone_id, state, status, last_update)
-                    original_non_default_zones.remove(zone_id)
-                    if not original_non_default_zones:
-                        break
-                    continue
+                continue
 
-            self._last_updated = int(time())
+        self._last_updated = int(time())
 
-            if self._pulse_connection.detailed_debug_logging:
-                LOG.debug("Updated zones in %f seconds", time() - start_time)
+        if self._pulse_connection.detailed_debug_logging:
+            LOG.debug("Updated zones in %f seconds", time() - start_time)
         return retval

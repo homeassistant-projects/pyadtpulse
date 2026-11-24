@@ -3,7 +3,6 @@
 import re
 import logging
 from time import time
-from threading import RLock
 from dataclasses import field, dataclass
 
 from lxml import html
@@ -52,7 +51,6 @@ class ADTPulseAlarmPanel:
     manufacturer: str = "ADT"
     online: bool = True
     _is_force_armed: bool = False
-    _state_lock: RLock = field(default_factory=RLock)
     _last_arm_disarm: int = field(default_factory=lambda: int(time()))
 
     @property
@@ -64,8 +62,7 @@ class ADTPulseAlarmPanel:
             str: the alarm status
 
         """
-        with self._state_lock:
-            return self._status
+        return self._status
 
     @status.setter
     def status(self, new_status: str) -> None:
@@ -76,10 +73,9 @@ class ADTPulseAlarmPanel:
             new_status (str): the new alarm status
 
         """
-        with self._state_lock:
-            if new_status not in ALARM_STATUSES:
-                raise ValueError(f"Alarm status must be one of {ALARM_STATUSES}")
-            self._status = new_status
+        if new_status not in ALARM_STATUSES:
+            raise ValueError(f"Alarm status must be one of {ALARM_STATUSES}")
+        self._status = new_status
 
     @property
     def is_away(self) -> bool:
@@ -90,8 +86,7 @@ class ADTPulseAlarmPanel:
             bool: True if armed away
 
         """
-        with self._state_lock:
-            return self._status == ADT_ALARM_AWAY
+        return self._status == ADT_ALARM_AWAY
 
     @property
     def is_home(self) -> bool:
@@ -102,8 +97,7 @@ class ADTPulseAlarmPanel:
             bool: True if system is armed home/stay
 
         """
-        with self._state_lock:
-            return self._status == ADT_ALARM_HOME
+        return self._status == ADT_ALARM_HOME
 
     @property
     def is_disarmed(self) -> bool:
@@ -114,8 +108,7 @@ class ADTPulseAlarmPanel:
             bool: True if the system is disarmed
 
         """
-        with self._state_lock:
-            return self._status == ADT_ALARM_OFF
+        return self._status == ADT_ALARM_OFF
 
     @property
     def is_force_armed(self) -> bool:
@@ -126,8 +119,7 @@ class ADTPulseAlarmPanel:
             bool: True if system armed in bypass mode
 
         """
-        with self._state_lock:
-            return self._is_force_armed
+        return self._is_force_armed
 
     @property
     def is_arming(self) -> bool:
@@ -138,8 +130,7 @@ class ADTPulseAlarmPanel:
             bool: True if system is attempting to arm
 
         """
-        with self._state_lock:
-            return self._status == ADT_ALARM_ARMING
+        return self._status == ADT_ALARM_ARMING
 
     @property
     def is_disarming(self) -> bool:
@@ -150,8 +141,7 @@ class ADTPulseAlarmPanel:
             bool: True if system is attempting to disarm
 
         """
-        with self._state_lock:
-            return self._status == ADT_ALARM_DISARMING
+        return self._status == ADT_ALARM_DISARMING
 
     @property
     def is_armed_night(self) -> bool:
@@ -162,8 +152,7 @@ class ADTPulseAlarmPanel:
             bool: True if system is in night mode
 
         """
-        with self._state_lock:
-            return self._status == ADT_ALARM_NIGHT
+        return self._status == ADT_ALARM_NIGHT
 
     @property
     def last_update(self) -> int:
@@ -174,8 +163,7 @@ class ADTPulseAlarmPanel:
             int: last arm/disarm time, in seconds since the epoch
 
         """
-        with self._state_lock:
-            return self._last_arm_disarm
+        return self._last_arm_disarm
 
     @typechecked
     async def _arm(
@@ -194,61 +182,60 @@ class ADTPulseAlarmPanel:
 
         """
         LOG.debug("Setting ADT alarm %s to %s, force = %s", self._sat, mode, force_arm)
-        with self._state_lock:
-            if self._status == mode:
-                LOG.warning(
-                    "Attempting to set alarm status %s to existing status %s",
-                    mode,
-                    self._status,
-                )
-            if ADT_ALARM_OFF not in (self._status, mode):
-                LOG.warning("Cannot set alarm status from %s to %s", self._status, mode)
-                return False
+        if self._status == mode:
+            LOG.warning(
+                "Attempting to set alarm status %s to existing status %s",
+                mode,
+                self._status,
+            )
+        if ADT_ALARM_OFF not in (self._status, mode):
+            LOG.warning("Cannot set alarm status from %s to %s", self._status, mode)
+            return False
+        params = {
+            "href": "rest/adt/ui/client/security/setArmState",
+            "armstate": self._status,  # existing state
+            "arm": mode,  # new state
+            "sat": self._sat,
+        }
+        if force_arm and mode != ADT_ALARM_OFF:
             params = {
-                "href": "rest/adt/ui/client/security/setArmState",
-                "armstate": self._status,  # existing state
+                "href": "rest/adt/ui/client/security/setForceArm",
+                "armstate": "forcearm",  # existing state
                 "arm": mode,  # new state
                 "sat": self._sat,
             }
-            if force_arm and mode != ADT_ALARM_OFF:
-                params = {
-                    "href": "rest/adt/ui/client/security/setForceArm",
-                    "armstate": "forcearm",  # existing state
-                    "arm": mode,  # new state
-                    "sat": self._sat,
-                }
 
-            response = await connection.async_query(
-                ADT_ARM_DISARM_URI,
-                method="POST",
-                extra_params=params,
-                timeout=10,
-            )
+        response = await connection.async_query(
+            ADT_ARM_DISARM_URI,
+            method="POST",
+            extra_params=params,
+            timeout=10,
+        )
 
-            tree = make_etree(
-                response[0],
-                response[1],
-                response[2],
-                logging.WARNING,
-                f"Failed updating ADT Pulse alarm {self._sat} to {mode}",
-            )
-            if tree is None:
+        tree = make_etree(
+            response[0],
+            response[1],
+            response[2],
+            logging.WARNING,
+            f"Failed updating ADT Pulse alarm {self._sat} to {mode}",
+        )
+        if tree is None:
+            return False
+
+        arm_result = tree.find(
+            path=".//div[@class='p_armDisarmWrapper']",
+            namespaces=None,
+        )
+        if arm_result is not None:
+            error_block = arm_result.find(".//div")
+            if error_block is not None:
+                error_text = arm_result.text_content().replace(
+                    "Arm AnywayCancel\n\n", ""
+                )
+                LOG.warning(
+                    "Could not set alarm state to %s because %s", mode, error_text
+                )
                 return False
-
-            arm_result = tree.find(
-                path=".//div[@class='p_armDisarmWrapper']",
-                namespaces=None,
-            )
-            if arm_result is not None:
-                error_block = arm_result.find(".//div")
-                if error_block is not None:
-                    error_text = arm_result.text_content().replace(
-                        "Arm AnywayCancel\n\n", ""
-                    )
-                    LOG.warning(
-                        "Could not set alarm state to %s because %s", mode, error_text
-                    )
-                    return False
         self._is_force_armed = force_arm
         if mode == ADT_ALARM_OFF:
             self._status = ADT_ALARM_DISARMING
@@ -335,52 +322,50 @@ class ADTPulseAlarmPanel:
             namespaces=None,
         )
         sat_location = "security_button_0"
-        with self._state_lock:
-            status_found = False
-            last_updated = int(time())
-            text = ""
-            if value is not None:
-                lines = value.text_content().strip().splitlines()
-                text = lines[0] if lines else ""
+        status_found = False
+        last_updated = int(time())
+        text = ""
+        if value is not None:
+            lines = value.text_content().strip().splitlines()
+            text = lines[0] if lines else ""
 
-                for (
-                    current_status,
-                    possible_statuses,
-                ) in ALARM_POSSIBLE_STATUS_MAP.items():
-                    if text.startswith(current_status):
-                        status_found = True
-                        if (
-                            self._status != possible_statuses[1]
-                            or last_updated - self._last_arm_disarm
-                            > ADT_ARM_DISARM_TIMEOUT
-                        ):
-                            self._status = possible_statuses[0]
-                            self._last_arm_disarm = last_updated
-                        break
+            for (
+                current_status,
+                possible_statuses,
+            ) in ALARM_POSSIBLE_STATUS_MAP.items():
+                if text.startswith(current_status):
+                    status_found = True
+                    if (
+                        self._status != possible_statuses[1]
+                        or last_updated - self._last_arm_disarm > ADT_ARM_DISARM_TIMEOUT
+                    ):
+                        self._status = possible_statuses[0]
+                        self._last_arm_disarm = last_updated
+                    break
 
-            if not status_found:
-                if value is None:
-                    LOG.warning("Failed to find alarm status on the page")
-                elif not text.startswith("Status Unavailable"):
-                    LOG.warning("Failed to get alarm status from '%s'", text)
-                self._status = ADT_ALARM_UNKNOWN
-                self._last_arm_disarm = last_updated
-                return
-            LOG.debug("Alarm status = %s", self._status)
-            sat_string = f'.//input[@id="{sat_location}"]'
-            sat_button = summary_html_etree.find(
-                path=sat_string,
-                namespaces=None,
-            )
-            if sat_button is not None and "onclick" in sat_button.attrib:
-                on_click = sat_button.attrib["onclick"]
-                match = re.search(r"sat=([a-z0-9\-]+)", on_click)
-                if match:
-                    self._sat = match.group(1)
-            if not self._sat:
-                LOG.warning("No sat recorded and was unable to extract sat.")
-            else:
-                LOG.debug("Extracted sat = %s", self._sat)
+        if not status_found:
+            if value is None:
+                LOG.warning("Failed to find alarm status on the page")
+            elif not text.startswith("Status Unavailable"):
+                LOG.warning("Failed to get alarm status from '%s'", text)
+            self._status = ADT_ALARM_UNKNOWN
+            self._last_arm_disarm = last_updated
+            return
+        LOG.debug("Alarm status = %s", self._status)
+        sat_string = f'.//input[@id="{sat_location}"]'
+        sat_button = summary_html_etree.find(
+            path=sat_string,
+            namespaces=None,
+        )
+        if sat_button is not None and "onclick" in sat_button.attrib:
+            on_click = sat_button.attrib["onclick"]
+            match = re.search(r"sat=([a-z0-9\-]+)", on_click)
+            if match:
+                self._sat = match.group(1)
+        if not self._sat:
+            LOG.warning("No sat recorded and was unable to extract sat.")
+        else:
+            LOG.debug("Extracted sat = %s", self._sat)
 
     @typechecked
     def set_alarm_attributes(self, alarm_attributes: dict[str, str]) -> None:

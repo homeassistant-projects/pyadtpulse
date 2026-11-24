@@ -1,7 +1,6 @@
 """Test cases for PulseConnectionProperties class."""
 
 import gc
-import threading
 
 import pytest
 from yarl import URL
@@ -23,18 +22,16 @@ class TestPulseConnectionProperties:
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
 
         # Act
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Assert
         assert connection_properties.service_host == host
         assert connection_properties._user_agent == user_agent
         assert connection_properties._detailed_debug_logging == detailed_debug_logging
-        assert connection_properties._debug_locks == debug_locks
 
     @pytest.mark.asyncio
     async def test_set_service_host_to_default_api_host(self):
@@ -43,9 +40,8 @@ class TestPulseConnectionProperties:
         host = DEFAULT_API_HOST
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act
@@ -61,9 +57,8 @@ class TestPulseConnectionProperties:
         host = DEFAULT_API_HOST
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act
@@ -79,9 +74,8 @@ class TestPulseConnectionProperties:
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act & Assert
@@ -94,9 +88,8 @@ class TestPulseConnectionProperties:
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act
@@ -112,9 +105,8 @@ class TestPulseConnectionProperties:
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = True
-        debug_locks = False
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act
@@ -130,13 +122,10 @@ class TestPulseConnectionProperties:
         host = ""
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
 
         # Act & Assert
         with pytest.raises(ValueError):
-            PulseConnectionProperties(
-                host, user_agent, detailed_debug_logging, debug_locks
-            )
+            PulseConnectionProperties(host, user_agent, detailed_debug_logging)
 
     @pytest.mark.asyncio
     async def test_set_service_host_to_valid_host_does_not_raise_value_error(self):
@@ -145,9 +134,8 @@ class TestPulseConnectionProperties:
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act & Assert
@@ -160,9 +148,8 @@ class TestPulseConnectionProperties:
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act & Assert
@@ -176,9 +163,8 @@ class TestPulseConnectionProperties:
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = True
-        debug_locks = False
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act
@@ -188,71 +174,16 @@ class TestPulseConnectionProperties:
         assert result == detailed_debug_logging
 
     @pytest.mark.asyncio
-    async def test_set_debug_locks_to_true_with_valid_service_host(self):
-        """Test enabling debug locks with a valid service host."""
-        # Arrange
-        host = "https://portal.adtpulse.com"
-        user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
-        detailed_debug_logging = False
-        debug_locks = True
-
-        # Act
-        connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
-        )
-
-        # Assert
-        assert connection_properties.service_host == host
-        assert connection_properties._user_agent == user_agent
-        assert connection_properties._detailed_debug_logging == detailed_debug_logging
-        assert connection_properties._debug_locks == debug_locks
-
-    @pytest.mark.asyncio
-    async def test_get_debug_locks_flag(self):
-        """Test retrieving the debug locks flag."""
-        # Arrange
-        host = "https://portal.adtpulse.com"
-        user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
-        detailed_debug_logging = False
-        debug_locks = True
-
-        # Act
-        connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
-        )
-
-        # Assert
-        assert connection_properties.debug_locks == debug_locks
-
-    @pytest.mark.asyncio
-    async def test_set_debug_locks_to_false_with_valid_service_host(self):
-        """Test disabling debug locks with a valid service host."""
-        # Arrange
-        host = "https://portal.adtpulse.com"
-        user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
-        detailed_debug_logging = False
-        debug_locks = False
-
-        # Act
-        connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
-        )
-
-        # Assert
-        assert connection_properties.debug_locks == debug_locks
-
-    @pytest.mark.asyncio
     async def test_set_api_version(self):
         """Test setting API version with various valid and invalid versions."""
         # Arrange
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
         version = "26.0.0-subpatch"
 
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act
@@ -276,11 +207,10 @@ class TestPulseConnectionProperties:
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
         response_path = "example.com/api/v1"
 
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act and Assert
@@ -293,9 +223,8 @@ class TestPulseConnectionProperties:
         host = "https://portal.adtpulse.com"
         user_agent = ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"]
         detailed_debug_logging = False
-        debug_locks = False
         connection_properties = PulseConnectionProperties(
-            host, user_agent, detailed_debug_logging, debug_locks
+            host, user_agent, detailed_debug_logging
         )
 
         # Act
@@ -384,32 +313,6 @@ def test_malformed_api_version_raises_value_error(version):
     p = PulseConnectionProperties("https://portal.adtpulse.com")
     with pytest.raises(ValueError):
         p.api_version = version
-
-
-@pytest.mark.asyncio
-async def test_clear_session_does_not_hold_lock_while_closing(mocker):
-    """Another thread can use the properties while the old session closes."""
-    p = PulseConnectionProperties("https://portal.adtpulse.com")
-    session = p.session
-    real_close = session.close
-    acquired: list[bool] = []
-
-    async def close() -> None:
-        def try_lock() -> None:
-            got = p._pci_attribute_lock.acquire(timeout=0)
-            acquired.append(got)
-            if got:
-                p._pci_attribute_lock.release()
-
-        thread = threading.Thread(target=try_lock)
-        thread.start()
-        thread.join()
-        await real_close()
-
-    mocker.patch.object(session, "close", side_effect=close)
-    await p.async_clear_session()
-    assert acquired == [True]
-    assert session.closed
 
 
 @pytest.mark.asyncio

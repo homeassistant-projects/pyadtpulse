@@ -116,11 +116,6 @@ def test_update_keeps_transition_until_timeout():
 # ---------------------------------------------------------------------------
 
 
-def test_state_lock_is_per_instance():
-    """Each panel has its own lock."""
-    assert ADTPulseAlarmPanel()._state_lock is not ADTPulseAlarmPanel()._state_lock
-
-
 def test_last_arm_disarm_is_set_at_creation():
     """_last_arm_disarm is the creation time, not the module import time."""
     with freeze_time("2031-05-06 07:08:09"):

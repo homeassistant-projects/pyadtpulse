@@ -13,7 +13,7 @@ from yarl import URL
 from typeguard import typechecked
 
 from .site import ADTPulseSite
-from .util import set_debug_lock, handle_response
+from .util import handle_response
 from .const import (
     ADT_TIMEOUT_URI,
     DEFAULT_API_HOST,
@@ -64,7 +64,6 @@ class PyADTPulseAsync:
     __slots__ = (
         "_authentication_properties",
         "_detailed_debug_logging",
-        "_pa_attribute_lock",
         "_pulse_connection",
         "_pulse_connection_properties",
         "_pulse_connection_status",
@@ -85,7 +84,6 @@ class PyADTPulseAsync:
         fingerprint: str,
         service_host: str = DEFAULT_API_HOST,
         user_agent=ADT_DEFAULT_HTTP_USER_AGENT["User-Agent"],
-        debug_locks: bool = False,
         keepalive_interval: int = ADT_DEFAULT_KEEPALIVE_INTERVAL,
         relogin_interval: int = ADT_DEFAULT_RELOGIN_INTERVAL,
         detailed_debug_logging: bool = False,
@@ -102,8 +100,6 @@ class PyADTPulseAsync:
                               https://portal-ca.adtpulse.com
             user_agent (str, optional): User Agent.
                          Defaults to ADT_DEFAULT_HTTP_HEADERS["User-Agent"].
-            debug_locks: (bool, optional): use debugging locks
-                        Defaults to False
             keepalive_interval (int, optional): number of minutes between
                         keepalive checks, defaults to ADT_DEFAULT_KEEPALIVE_INTERVAL,
                         maxiumum is ADT_MAX_KEEPALIVE_INTERVAL
@@ -113,31 +109,25 @@ class PyADTPulseAsync:
             detailed_debug_logging (bool, optional): enable detailed debug logging
 
         """
-        self._pa_attribute_lock = set_debug_lock(
-            debug_locks, "pyadtpulse.pa_attribute_lock"
-        )
         self._pulse_connection_properties = PulseConnectionProperties(
-            service_host, user_agent, detailed_debug_logging, debug_locks
+            service_host, user_agent, detailed_debug_logging
         )
         self._authentication_properties = PulseAuthenticationProperties(
             username=username,
             password=password,
             fingerprint=fingerprint,
-            debug_locks=debug_locks,
         )
         self._pulse_connection_status = PulseConnectionStatus(
-            debug_locks=debug_locks, detailed_debug_logging=detailed_debug_logging
+            detailed_debug_logging=detailed_debug_logging
         )
         self._pulse_properties = PyADTPulseProperties(
             keepalive_interval=keepalive_interval,
             relogin_interval=relogin_interval,
-            debug_locks=debug_locks,
         )
         self._pulse_connection = PulseConnection(
             self._pulse_connection_status,
             self._pulse_connection_properties,
             self._authentication_properties,
-            debug_locks,
         )
         self._sync_task: asyncio.Task | None = None
         self._timeout_task: asyncio.Task | None = None
@@ -156,23 +146,22 @@ class PyADTPulseAsync:
         )
 
     async def _update_site(self, tree: html.HtmlElement) -> None:
-        with self._pa_attribute_lock:
-            start_time = 0.0
-            if self._pulse_connection.detailed_debug_logging:
-                start_time = time.time()
+        start_time = 0.0
+        if self._pulse_connection.detailed_debug_logging:
+            start_time = time.time()
+        if self._site is None:
+            await self._initialize_sites(tree)
             if self._site is None:
-                await self._initialize_sites(tree)
-                if self._site is None:
-                    raise RuntimeError("pyadtpulse could not retrieve site")
-            self._site.alarm_control_panel.update_alarm_from_etree(tree)
-            updated_zones = self._site.update_zone_from_etree(tree)
-            self._updated_zones.update(updated_zones)
-            if self._pulse_connection.detailed_debug_logging:
-                LOG.debug(
-                    "Updated site %s in %s seconds",
-                    self._site.id,
-                    time.time() - start_time,
-                )
+                raise RuntimeError("pyadtpulse could not retrieve site")
+        self._site.alarm_control_panel.update_alarm_from_etree(tree)
+        updated_zones = self._site.update_zone_from_etree(tree)
+        self._updated_zones.update(updated_zones)
+        if self._pulse_connection.detailed_debug_logging:
+            LOG.debug(
+                "Updated site %s in %s seconds",
+                self._site.id,
+                time.time() - start_time,
+            )
 
     async def _initialize_sites(self, tree: html.HtmlElement) -> None:
         """
@@ -319,14 +308,13 @@ class PyADTPulseAsync:
                     msg = "quick"
                     if time.time() > next_full_logout_time:
                         msg = "full"
-                    with self._pa_attribute_lock:
-                        if self._sync_task:
-                            if self._detailed_debug_logging:
-                                LOG.debug(
-                                    "%s: waiting for sync check task to sleep",
-                                    task_name,
-                                )
-                            await self._sync_check_sleeping.wait()
+                    if self._sync_task:
+                        if self._detailed_debug_logging:
+                            LOG.debug(
+                                "%s: waiting for sync check task to sleep",
+                                task_name,
+                            )
+                        await self._sync_check_sleeping.wait()
                     if msg == "full":
                         next_full_logout_time = time.time() + randint(  # noqa: S311
                             int(0.75 * FULL_LOGOUT_INTERVAL), FULL_LOGOUT_INTERVAL
@@ -396,15 +384,14 @@ class PyADTPulseAsync:
         exception logged), so it can be restarted instead of re-raising
         on every call.
         """
-        with self._pa_attribute_lock:
-            if self._sync_task is not None and self._sync_task.done():
-                task = self._sync_task
-                self._sync_task = None
-                self._log_task_result(task)
-            if self._timeout_task is not None and self._timeout_task.done():
-                task = self._timeout_task
-                self._timeout_task = None
-                self._log_task_result(task)
+        if self._sync_task is not None and self._sync_task.done():
+            task = self._sync_task
+            self._sync_task = None
+            self._log_task_result(task)
+        if self._timeout_task is not None and self._timeout_task.done():
+            task = self._timeout_task
+            self._timeout_task = None
+            self._log_task_result(task)
 
     async def _cancel_task(self, task: asyncio.Task | None) -> None:
         """
@@ -428,11 +415,9 @@ class PyADTPulseAsync:
         except Exception:
             LOG.exception("%s raised while being cancelled", task_name)
         if task == self._sync_task:
-            with self._pa_attribute_lock:
-                self._sync_task = None
+            self._sync_task = None
         else:
-            with self._pa_attribute_lock:
-                self._timeout_task = None
+            self._timeout_task = None
         LOG.debug("%s successfully cancelled", task_name)
 
     async def _login_looped(self, task_name: str) -> None:
@@ -868,15 +853,14 @@ class PyADTPulseAsync:
             self._update_exception = None
             self._pulse_properties.updates_exist.clear()
             raise pending_exception
-        with self._pa_attribute_lock:
-            if self._timeout_task is None:
-                raise PulseNotLoggedInError()
-            if self._sync_task is None:
-                coro = self._sync_check_task()
-                self._sync_task = asyncio.create_task(
-                    coro, name=f"{SYNC_CHECK_TASK_NAME}: Async session"
-                )
-                await asyncio.sleep(0)
+        if self._timeout_task is None:
+            raise PulseNotLoggedInError()
+        if self._sync_task is None:
+            coro = self._sync_check_task()
+            self._sync_task = asyncio.create_task(
+                coro, name=f"{SYNC_CHECK_TASK_NAME}: Async session"
+            )
+            await asyncio.sleep(0)
         old_alarm_status = self.site.alarm_control_panel.status
         await self._pulse_properties.updates_exist.wait()
         self._pulse_properties.updates_exist.clear()
@@ -893,12 +877,9 @@ class PyADTPulseAsync:
     @property
     def site(self) -> ADTPulseSite:
         """Return the site associated with the Pulse login."""
-        with self._pa_attribute_lock:
-            if self._site is None:
-                raise RuntimeError(
-                    "No sites have been retrieved, have you logged in yet?"
-                )
-            return self._site
+        if self._site is None:
+            raise RuntimeError("No sites have been retrieved, have you logged in yet?")
+        return self._site
 
     @property
     def is_connected(self) -> bool:
@@ -975,8 +956,7 @@ class PyADTPulseAsync:
             Exception: the pending exception, or None
 
         """
-        with self._pa_attribute_lock:
-            return self._sync_check_exception
+        return self._sync_check_exception
 
     @_update_exception.setter
     @typechecked
@@ -988,5 +968,4 @@ class PyADTPulseAsync:
             value (Exception): the exception, or None to clear it
 
         """
-        with self._pa_attribute_lock:
-            self._sync_check_exception = value
+        self._sync_check_exception = value

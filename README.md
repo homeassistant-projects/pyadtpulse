@@ -200,7 +200,6 @@ trust it again.
 | `keepalive_interval` | `5` | Minutes between keepalive requests that keep the session open. Must be from 1 to 15. |
 | `relogin_interval` | `120` | Minutes between background re-logins. Each re-login happens at a random point between 75% and 100% of the interval. Must be at least 20. |
 | `detailed_debug_logging` | `False` | Log more detail, such as each request and how long updates take. |
-| `debug_locks` | `False` | Use locks that log who holds them, for debugging. |
 
 `keepalive_interval`, `relogin_interval` and `detailed_debug_logging` are also properties
 you can change on a running client. Setting `keepalive_interval` or `relogin_interval` to
@@ -238,6 +237,10 @@ pyadtpulse 3.0 finishes the API cleanup:
 
   `wait_for_update()` and `wait_for_backoff()` still work but raise a
   `DeprecationWarning`; they will be removed in 4.0.
+- The `debug_locks` parameter is removed from `PyADTPulseAsync` and the other
+  classes, along with `util.DebugRLock` and `util.set_debug_lock()`. The internal
+  threading locks are gone too: the client runs on one event loop, where they never
+  stopped coroutines from interleaving. Pass the other arguments by keyword.
 
 ## Upgrading to 2.0
 

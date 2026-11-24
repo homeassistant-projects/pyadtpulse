@@ -1,11 +1,9 @@
 """Utility functions for pyadtpulse."""
 
-import sys
 import string
 import logging
 import secrets
 from datetime import datetime, timedelta
-from threading import RLock, current_thread
 
 from lxml import html
 from yarl import URL
@@ -97,104 +95,6 @@ def generate_random_fingerprint() -> str:
     )
 
 
-class DebugRLock:
-    """Provides a debug lock logging caller who acquired/released."""
-
-    def __init__(self, name: str):
-        """Create the lock."""
-        self._Rlock = RLock()
-        self._lock_name = name
-
-    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
-        """
-        Acquire the lock.
-
-        Args:
-            blocking (bool, optional): blocks if can't obtain the lock if True.
-                                       Defaults to True.
-            timeout (float, optional): timeout to wait to acquire the lock.
-                                       Defaults to -1.
-
-        Returns:
-            bool: True if lock obtained, False if blocking is False and lock couldn't be
-                  obtained
-
-        """
-        caller = sys._getframe().f_back
-        thread_name = current_thread().name
-        if caller is not None:
-            caller2 = caller.f_code.co_name
-        else:
-            caller2 = "*Unknown*"
-        LOG.debug(
-            "acquiring lock %s blocking: %s from %s from thread %s",
-            self._lock_name,
-            blocking,
-            caller2,
-            thread_name,
-        )
-        retval = self._Rlock.acquire(blocking, timeout)
-        LOG.debug(
-            "acquisition of %s from %s from thread %s  returned %d info: %s",
-            self._lock_name,
-            caller2,
-            thread_name,
-            retval,
-            repr(self._Rlock),
-        )
-        return retval
-
-    __enter__ = acquire
-
-    def release(self) -> None:
-        """Releases the lock."""
-        caller = sys._getframe().f_back
-        if caller is not None:
-            caller2 = caller.f_code.co_name
-        else:
-            caller2 = "*Unknown*"
-        thread_name = current_thread().name
-        LOG.debug(
-            "attempting to release lock %s from %s in thread %s",
-            self._lock_name,
-            caller2,
-            thread_name,
-        )
-        self._Rlock.release()
-        LOG.debug(
-            "released lock %s from %s in thread %s info: %s",
-            self._lock_name,
-            caller2,
-            thread_name,
-            repr(self._Rlock),
-        )
-
-    def __exit__(self, t, v, b):
-        """
-        Automatically release lock on exit.
-
-        Args:
-            t (_type_): _description_
-            v (_type_): _description_
-            b (_type_): _description_
-
-        """
-        caller = sys._getframe().f_back
-        if caller is not None:
-            caller2 = caller.f_code.co_name
-        else:
-            caller2 = "*Unknown*"
-        thread_name = current_thread().name
-        LOG.debug(
-            "released lock %s from %s in thread %s at exit",
-            self._lock_name,
-            caller2,
-            thread_name,
-        )
-
-        self._Rlock.release()
-
-
 def parse_pulse_datetime(datestring: str) -> datetime:
     """
     Parse pulse date strings.
@@ -229,20 +129,3 @@ def parse_pulse_datetime(datestring: str) -> datetime:
     )
     last_update = datetime.combine(last_update, update_time)
     return last_update
-
-
-def set_debug_lock(debug_lock: bool, name: str) -> "RLock | DebugRLock":
-    """
-    Set lock or debug lock.
-
-    Args:
-        debug_lock (bool): set a debug lock
-        name (str): debug lock name
-
-    Returns:
-        RLock | DebugRLock: lock object to return
-
-    """
-    if debug_lock:
-        return DebugRLock(name)
-    return RLock()
