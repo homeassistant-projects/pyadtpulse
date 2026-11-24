@@ -9,7 +9,7 @@ build
 __pycache__
 .mypy_cache
 *.swp
-.vscode/settings.json
+.vscode/
 .coverage
 
 uv.lock
