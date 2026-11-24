@@ -14,7 +14,9 @@ never `--admin`.
 1. **CI is green.** Wait with `gh pr checks <n> --watch --fail-fast` (run it
    in the background) and go on only if it exits 0. Don't write your own
    polling loop: a hand-rolled loop that exits on the wrong condition is how a
-   PR once got merged with checks still pending. If any check is `fail`, stop
+   PR once got merged with checks still pending. In the first few seconds
+   after a push GitHub has no checks for the PR yet. `--watch` then exits 1
+   with "no checks reported", so wait a few seconds and run it again. If any check is `fail`, stop
    and report it. A PR with no checks at all is either a first-time
    contributor's (the maintainer must approve its workflow runs on GitHub) or
    one whose base was just changed (see **Base branch**).
