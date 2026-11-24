@@ -1,3 +1,45 @@
+## Unreleased
+# What's Changed
+* Pin aiohttp and pytest for tests so CI runs again by @jra3 in https://github.com/homeassistant-projects/pyadtpulse/pull/98
+* Fix logins that fail when ADT switches portal versions by @jra3 in https://github.com/homeassistant-projects/pyadtpulse/pull/99
+* Finish MFA logins with a verification code (`async_request_mfa_code`, `async_complete_mfa_login`) by @jra3 in https://github.com/homeassistant-projects/pyadtpulse/pull/100
+* Fix ruff format check and move test-only caps into the testing group by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/101
+
+# New Contributors
+* @jra3 made their first contribution in https://github.com/homeassistant-projects/pyadtpulse/pull/98
+
+**Full Changelog**: https://github.com/homeassistant-projects/pyadtpulse/compare/1.2.14...master
+
+## 1.2.14 (2026-03-06)
+# What's Changed
+* Remove uvloop dependency, add Python 3.14 support, and bump version to 1.2.14 by @Copilot in https://github.com/homeassistant-projects/pyadtpulse/pull/95
+
+# New Contributors
+* @Copilot made their first contribution in https://github.com/homeassistant-projects/pyadtpulse/pull/95
+
+**Full Changelog**: https://github.com/homeassistant-projects/pyadtpulse/compare/1.2.13...1.2.14
+
+## 1.2.13 (2026-03-05)
+# What's Changed
+* Bump aiohttp from 3.12.15 to 3.13.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/77
+* Bump ruff from 0.14.0 to 0.14.2 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/81
+* Bump aiohttp from 3.13.0 to 3.13.1 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/80
+* Bump uvloop from 0.21.0 to 0.22.1 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/79
+* Bump aiohttp from 3.13.1 to 3.13.2 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/83
+* Bump ruff from 0.14.2 to 0.14.3 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/82
+* Bump ruff from 0.14.3 to 0.14.4 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/84
+* Bump pre-commit from 4.3.0 to 4.4.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/85
+* Bump ruff from 0.14.4 to 0.14.6 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/89
+* Bump pytest from 8.4.2 to 9.0.1 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/88
+* Bump pre-commit from 4.4.0 to 4.5.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/87
+* Bump pytest-asyncio from 1.2.0 to 1.3.0 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/86
+* Bump astral-sh/setup-uv from 6 to 7 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/92
+* Bump github/codeql-action from 3 to 4 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/91
+* Bump actions/checkout from 4 to 6 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/90
+* Dependency updates by @EVWorth in https://github.com/homeassistant-projects/pyadtpulse/pull/93
+
+**Full Changelog**: https://github.com/homeassistant-projects/pyadtpulse/compare/1.2.12...1.2.13
+
 ## 1.2.12 (2025-10-14)
 # What's Changed
 * Bump freezegun from 1.5.3 to 1.5.5 by @dependabot[bot] in https://github.com/homeassistant-projects/pyadtpulse/pull/56
@@ -38,6 +80,16 @@
 * @EVWorth made their first contribution in https://github.com/homeassistant-projects/pyadtpulse/pull/45
 
 **Full Changelog**: https://github.com/homeassistant-projects/pyadtpulse/compare/1.2.10...1.2.11
+
+## 1.2.10 (2025-06-02)
+# What's Changed
+* Update versions by @rsnodgrass in https://github.com/homeassistant-projects/pyadtpulse/pull/39
+* Merge versions bumps by @rsnodgrass in https://github.com/homeassistant-projects/pyadtpulse/pull/40
+* Bump version to 1.2.11 by @HeroesDieYoung in https://github.com/homeassistant-projects/pyadtpulse/pull/41
+
+Dependency and Python version updates. The `1.2.10` tag's `pyproject.toml` already says 1.2.11.
+
+**Full Changelog**: https://github.com/homeassistant-projects/pyadtpulse/compare/1.2.9...1.2.10
 
 ## 1.2.9 (2024-04-21)
 
