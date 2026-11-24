@@ -1,10 +1,38 @@
 version: 2
 updates:
+  # pyproject.toml dependencies and dependency groups. uv.lock is not committed
+  # (this is a library), so this bumps the minimums and pins in pyproject.toml.
   - package-ecosystem: pip
     directory: /
     schedule:
       interval: weekly
+    # Match the 2-day exclude-newer cooldown in [tool.uv].
+    cooldown:
+      default-days: 2
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
+
+  # Actions are pinned to commit SHAs; Dependabot bumps the SHA and the
+  # trailing "# vX.Y.Z" comment.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 2
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # Hook revs in .pre-commit-config.yaml. The ruff-pre-commit rev must match the
+  # ruff pin in pyproject.toml's dev group, so merge both ruff bumps together.
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 2
+    groups:
+      pre-commit:
+        patterns: ["*"]
