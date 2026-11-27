@@ -22,6 +22,7 @@ ADT_ORB_URI = "/ajax/orb.jsp"
 ADT_SYSTEM_URI = "/system/system.jsp"
 ADT_DEVICE_URI = "/system/device.jsp"
 ADT_GATEWAY_URI = "/system/gateway.jsp"
+ADT_HISTORY_URI = "/history/history.jsp"
 ADT_SYNC_CHECK_URI = "/Ajax/SyncCheckServ"
 ADT_TIMEOUT_URI = "/KeepAlive"
 # Intervals are all in minutes

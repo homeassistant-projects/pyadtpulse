@@ -10,9 +10,18 @@ from lxml import html
 from typeguard import typechecked
 
 from .util import make_etree, remove_prefix, parse_pulse_datetime
-from .const import ADT_DEVICE_URI, ADT_SYSTEM_URI, ADT_GATEWAY_URI, ADT_GATEWAY_STRING
+from .const import (
+    ADT_DEVICE_URI,
+    ADT_SYSTEM_URI,
+    ADT_GATEWAY_URI,
+    ADT_HISTORY_URI,
+    ADT_GATEWAY_STRING,
+)
 from .exceptions import (
     PulseGatewayOfflineError,
+    PulseClientConnectionError,
+    PulseServerConnectionError,
+    PulseServiceTemporarilyUnavailableError,
 )
 from .site_properties import ADTPulseSiteProperties
 from .pulse_connection import PulseConnection
@@ -22,11 +31,56 @@ LOG = logging.getLogger(__name__)
 SECURITY_PANEL_ID = "1"
 SECURITY_PANEL_NAME = "Security Panel"
 
+# Hours of history to read for zones the orb gave no last event time: a week
+# (the longest period the history page offers) for the zones parsed at login,
+# then the past hour for zones that change while we watch.
+LOGIN_HISTORY_HOURS = 168
+CHANGE_HISTORY_HOURS = 1
+HISTORY_ZONE_RE = re.compile(r"\(Zone (\d+)\)")
+
+
+def _parse_zone_history(tree: html.HtmlElement) -> dict[int, datetime]:
+    """
+    Find each zone's newest event on the portal's history page.
+
+    Rows look like "Today 6:29 PM | Door Kitchen (Zone 4) set to Closed."
+
+    Args:
+        tree (html.HtmlElement): the parsed history page
+
+    Returns:
+        dict[int, datetime]: zone id to the time of its newest event
+
+    """
+    events: dict[int, datetime] = {}
+    for row in tree.iterfind(".//table[@id='myTable']//tr"):
+        stamp = row.find(".//span[@class='p_timestampText']")
+        detail = row.find("td")
+        if stamp is None or detail is None:
+            continue
+        match = HISTORY_ZONE_RE.search(detail.text_content())
+        if match is None:
+            continue
+        try:
+            when = parse_pulse_datetime(stamp.text_content())
+        except ValueError:
+            LOG.debug("Skipping history row with time %r", stamp.text_content())
+            continue
+        zone = int(match.group(1))
+        if zone not in events or when > events[zone]:
+            events[zone] = when
+    return events
+
 
 class ADTPulseSite(ADTPulseSiteProperties):
     """Represents an individual ADT Pulse site."""
 
-    __slots__ = ("_pulse_connection", "_tripped_zones", "_trouble_zones")
+    __slots__ = (
+        "_pulse_connection",
+        "_tripped_zones",
+        "_trouble_zones",
+        "_zones_without_activity",
+    )
 
     @typechecked
     def __init__(self, pulse_connection: PulseConnection, site_id: str, name: str):
@@ -43,6 +97,9 @@ class ADTPulseSite(ADTPulseSiteProperties):
         super().__init__(site_id, name)
         self._trouble_zones: set[int] | None = None
         self._tripped_zones: set[int] = set()
+        # zones the orb updated without a last event time, mapped to the
+        # hours of history to read for them
+        self._zones_without_activity: dict[int, int] = {}
 
     @typechecked
     async def async_arm_home(self, force_arm: bool = False) -> bool:
@@ -308,24 +365,20 @@ class ADTPulseSite(ADTPulseSiteProperties):
                 return None
             return zone
 
-        def get_zone_last_update(zone_row: html.HtmlElement, zone: int) -> datetime:
+        def get_zone_last_update(
+            zone_row: html.HtmlElement, zone: int
+        ) -> datetime | None:
+            # Pulse 30 and later leave the title out; the time is then read
+            # from the history page by async_update_zone_activity
+            icon = zone_row.find(path=".//span[@class='devStatIcon']", namespaces=None)
+            title = icon.get("title") if icon is not None else None
+            if not title:
+                return None
             try:
-                last_update = parse_pulse_datetime(
-                    remove_prefix(
-                        zone_row.find(
-                            path=".//span[@class='devStatIcon']",
-                            namespaces=None,
-                        ).get("title"),
-                        "Last Event:",
-                    )
-                )
-            except (AttributeError, ValueError):
-                LOG.debug(
-                    "Unable to set last event time for zone %d due to malformed html",
-                    zone,
-                )
-                last_update = datetime(1970, 1, 1)
-            return last_update
+                return parse_pulse_datetime(remove_prefix(title, "Last Event:"))
+            except ValueError:
+                LOG.debug("Unable to parse last event time %r for zone %d", title, zone)
+                return None
 
         def get_zone_state(zone_row: html.HtmlElement, zone: int) -> str:
             try:
@@ -371,7 +424,8 @@ class ADTPulseSite(ADTPulseSiteProperties):
             zone: int,
             state: str,
             status: str,
-            last_update: datetime,
+            last_update: datetime | None,
+            history_hours: int,
         ) -> None:
             # id:    [integer]
             # name:  device name
@@ -388,7 +442,22 @@ class ADTPulseSite(ADTPulseSiteProperties):
             if not self._zones:
                 LOG.warning("No zones exist")
                 return
-            self._zones.update_device_info(zone, state, status, last_update)
+            if last_update is None:
+                # keep the time we had until the history page says otherwise
+                current = self._zones[zone]
+                previous = current.last_activity_timestamp
+                changed = (current.state, current.status) != (state, status)
+                self._zones.update_device_info(zone, state, status)
+                self._zones[zone].last_activity_timestamp = previous
+                # the orb repeats tripped and trouble zones on every update;
+                # only read history for a zone that changed or was never read
+                if changed or history_hours == LOGIN_HISTORY_HOURS:
+                    self._zones_without_activity[zone] = max(
+                        history_hours, self._zones_without_activity.get(zone, 0)
+                    )
+            else:
+                self._zones.update_device_info(zone, state, status, last_update)
+                self._zones_without_activity.pop(zone, None)
             LOG.debug(
                 "Set zone %d - to %s, status %s with timestamp %s",
                 zone,
@@ -422,6 +491,7 @@ class ADTPulseSite(ADTPulseSiteProperties):
             first_pass = True
             self._trouble_zones = set()
         original_non_default_zones = self._trouble_zones | self._tripped_zones
+        history_hours = LOGIN_HISTORY_HOURS if first_pass else CHANGE_HISTORY_HOURS
         # v26 and lower: temp = row.find("span", {"class": "p_grayNormalText"})
         for row in tree.findall(
             path=".//tr[@class='p_listRow']",
@@ -437,25 +507,25 @@ class ADTPulseSite(ADTPulseSiteProperties):
             if status != "Online":
                 self._trouble_zones.add(zone_id)
                 self._tripped_zones.discard(zone_id)
-                update_zone_from_row(zone_id, state, status, last_update)
+                update_zone_from_row(zone_id, state, status, last_update, history_hours)
                 continue
             # this should be trouble or OK sensors
             if state != "OK":
                 self._tripped_zones.add(zone_id)
                 if zone_id in self._trouble_zones:
                     self._trouble_zones.remove(zone_id)
-                update_zone_from_row(zone_id, state, status, last_update)
+                update_zone_from_row(zone_id, state, status, last_update, history_hours)
                 continue
             # everything here is OK, so we just need to check if
             #   anything in tripped or trouble states have
             # returned to normal
             if first_pass:
-                update_zone_from_row(zone_id, state, status, last_update)
+                update_zone_from_row(zone_id, state, status, last_update, history_hours)
                 continue
             if not original_non_default_zones:
                 break
             if zone_id in original_non_default_zones:
-                update_zone_from_row(zone_id, state, status, last_update)
+                update_zone_from_row(zone_id, state, status, last_update, history_hours)
                 original_non_default_zones.remove(zone_id)
                 if not original_non_default_zones:
                     break
@@ -466,3 +536,61 @@ class ADTPulseSite(ADTPulseSiteProperties):
         if self._pulse_connection.detailed_debug_logging:
             LOG.debug("Updated zones in %f seconds", time() - start_time)
         return retval
+
+    async def async_update_zone_activity(self) -> set[int]:
+        """
+        Read last activity times the orb left out from the history page.
+
+        Pulse 30 and later no longer put each zone's last event time in the
+        orb, so update_zone_from_etree leaves those zones' times as they were.
+        This fetches the history page once, for the past week if any of them
+        were parsed at login and the past hour otherwise, and sets each zone's
+        time to its newest event there. Zones with no event in that period
+        keep their time. If the page can't be fetched, the zones wait for the
+        next call.
+
+        Returns:
+            set[int]: the zones whose last activity time changed
+
+        """
+        if not self._zones_without_activity:
+            return set()
+        hours = max(self._zones_without_activity.values())
+        try:
+            code, text, url = await self._pulse_connection.async_query(
+                ADT_HISTORY_URI,
+                extra_params={"filter": "All", "timefilter": str(hours)},
+            )
+        except (
+            PulseClientConnectionError,
+            PulseServerConnectionError,
+            PulseServiceTemporarilyUnavailableError,
+        ) as ex:
+            LOG.warning("Could not fetch zone history from ADT Pulse: %s", ex)
+            return set()
+        tree = make_etree(
+            code,
+            text,
+            url,
+            logging.WARNING,
+            "Failed loading zone history from ADT Pulse service",
+        )
+        if tree is None:
+            return set()
+        events = _parse_zone_history(tree)
+        updated: set[int] = set()
+        for zone in self._zones_without_activity:
+            when = events.get(zone)
+            if when is None or zone not in self._zones:
+                continue
+            timestamp = int(when.timestamp())
+            if self._zones[zone].last_activity_timestamp != timestamp:
+                self._zones[zone].last_activity_timestamp = timestamp
+                updated.add(zone)
+        LOG.debug(
+            "Set last activity for zones %s from %d hours of history",
+            sorted(updated),
+            hours,
+        )
+        self._zones_without_activity.clear()
+        return updated

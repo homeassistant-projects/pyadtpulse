@@ -155,6 +155,7 @@ class PyADTPulseAsync:
                 raise RuntimeError("pyadtpulse could not retrieve site")
         self._site.alarm_control_panel.update_alarm_from_etree(tree)
         updated_zones = self._site.update_zone_from_etree(tree)
+        updated_zones |= await self._site.async_update_zone_activity()
         self._updated_zones.update(updated_zones)
         if self._pulse_connection.detailed_debug_logging:
             LOG.debug(
