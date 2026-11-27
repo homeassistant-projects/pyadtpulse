@@ -444,12 +444,17 @@ class ADTPulseSite(ADTPulseSiteProperties):
                 return
             if last_update is None:
                 # keep the time we had until the history page says otherwise
-                previous = self._zones[zone].last_activity_timestamp
+                current = self._zones[zone]
+                previous = current.last_activity_timestamp
+                changed = (current.state, current.status) != (state, status)
                 self._zones.update_device_info(zone, state, status)
                 self._zones[zone].last_activity_timestamp = previous
-                self._zones_without_activity[zone] = max(
-                    history_hours, self._zones_without_activity.get(zone, 0)
-                )
+                # the orb repeats tripped and trouble zones on every update;
+                # only read history for a zone that changed or was never read
+                if changed or history_hours == LOGIN_HISTORY_HOURS:
+                    self._zones_without_activity[zone] = max(
+                        history_hours, self._zones_without_activity.get(zone, 0)
+                    )
             else:
                 self._zones.update_device_info(zone, state, status, last_update)
                 self._zones_without_activity.pop(zone, None)

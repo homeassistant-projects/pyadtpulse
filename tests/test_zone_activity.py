@@ -143,6 +143,34 @@ async def test_zone_change_reads_last_hour_of_history(
 
 
 @pytest.mark.asyncio
+async def test_unchanged_tripped_zone_skips_history(
+    mocked_server_responses: aioresponses,
+    get_mocked_url: Callable[..., str],
+    read_file: Callable[..., str],
+    mocker,
+):
+    """The orb repeats an open zone on every update; only its change reads history."""
+    mocked_server_responses.get(
+        history_url(get_mocked_url), body=read_file("history.html"), repeat=True
+    )
+    with freeze_time(NOW):
+        p = await login(read_file, mocker)
+    try:
+        mocked_server_responses.get(
+            re.compile(re.escape(get_mocked_url("/ajax/orb.jsp")) + r"(\?.*)?$"),
+            body=without_last_event(read_file("orb_patio_opened.html")),
+            repeat=True,
+        )
+        with freeze_time(NOW):
+            assert await p.async_update()
+            assert await p.async_update()
+        assert p.site.zones_as_dict[11].state == "Open"
+        assert history_time_filters(mocked_server_responses) == ["168", "1"]
+    finally:
+        await stop(p)
+
+
+@pytest.mark.asyncio
 async def test_history_failure_keeps_previous_times(
     mocked_server_responses: aioresponses,
     get_mocked_url: Callable[..., str],
